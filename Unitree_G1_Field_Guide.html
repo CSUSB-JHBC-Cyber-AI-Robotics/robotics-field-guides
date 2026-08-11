@@ -229,6 +229,7 @@
       <a class="navlink" href="#ch13"><span class="check">&#10003;</span>13 &middot; Glossary</a>
       <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; Command Cheat-Sheet</a>
       <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Pre-Flight Checklist</a>
+      <a class="navlink" href="#sources"><span class="check">&#10003;</span>&#128218; Sources &amp; Further Reading</a>
     </div>
   </div>
 </nav>
@@ -305,7 +306,7 @@
   <p class="intro">A humanoid robot in a genuinely new category: small enough and cheap enough to sit in a university lab, capable enough to be a serious research platform, and open enough that a student can command its joints directly.</p>
 
   <h3>The shape of it</h3>
-  <p>The G1 is a bipedal humanoid roughly 1.3 m tall and around 35 kg. It ships in variants &mdash; commonly <strong>23 DoF</strong> and <strong>29 DoF</strong> &mdash; where the higher count adds waist articulation and more capable wrists. Onboard it carries an IMU, a depth camera and LIDAR on most configurations, a microphone array and speaker, and a programmable chest LED. Internally it runs two computers: a locomotion computer that owns balance and walking, and a development computer that is yours.</p>
+  <p>The G1 is a bipedal humanoid about <strong>1.32 m</strong> tall standing (it folds to roughly 0.69 m) and <strong>around 35 kg</strong> with battery. The standard unit has <strong>23 DoF</strong> &mdash; 6 per leg, 5 per arm, plus waist. The EDU line is configurable from <strong>23 up to 43 DoF</strong>, adding waist and wrist joints and optionally dexterous hands; the <strong>29-DoF</strong> configuration (7 per arm, 3 waist) is the one most lab humanoid work assumes. Onboard it carries an IMU, a depth camera and LIDAR on most configurations, a microphone array and speaker, and a programmable chest LED. Internally it runs two computers: a locomotion computer that owns balance and walking, and a development computer that is yours.</p>
 
   <h3>Why the two-computer split matters</h3>
   <p>This is the architectural fact that explains most of the SDK. The <strong>locomotion computer</strong> runs the balance controller &mdash; a high-rate loop keeping a fundamentally unstable machine upright. You do not get to interrupt that, and you should not want to. The <strong>development computer</strong> is where your code runs, and it talks to the locomotion computer over the internal network.</p>
@@ -516,7 +517,7 @@ for i in range(steps):
   <p class="intro">Joints are addressed by integer index, which means an off-by-one error doesn't produce an exception — it moves the wrong limb. This chapter is about not doing that.</p>
 
   <h3>The layout</h3>
-  <p>Indices run roughly from the legs upward: left leg, right leg, waist, left arm, right arm. On a 29-DoF G1 that's twelve leg joints (six per leg: hip pitch/roll/yaw, knee, ankle pitch/roll), waist joints, and seven per arm (shoulder pitch/roll/yaw, elbow, wrist roll/pitch/yaw). The 23-DoF variant locks the waist and simplifies the wrists, which shifts the indices of everything above the legs.</p>
+  <p>Indices run roughly from the legs upward: left leg, right leg, waist, left arm, right arm. Both variants share twelve leg joints (six per leg: hip pitch/roll/yaw, knee, ankle pitch/roll). Above that they diverge: the <strong>29-DoF</strong> configuration has three waist joints and seven per arm (shoulder pitch/roll/yaw, elbow, wrist roll/pitch/yaw), while the <strong>23-DoF</strong> standard unit has a single waist joint and five per arm, dropping the extra wrist axes. Because the legs come first, that difference shifts the index of <em>every</em> joint above them.</p>
 
   <div class="box warn">
     <span class="h">Do not hardcode indices from a tutorial</span>
@@ -865,6 +866,46 @@ ros2 topic list</code></pre>
     <span class="h">A closing word</span>
     The G1 is an unusual teaching platform because the gap between "reading about robotics" and "commanding a humanoid's shoulder joint" is about forty lines of Python. That accessibility is genuinely new, and it's why this class of machine is showing up in undergraduate labs at all. It also means the responsibility arrives much earlier than it used to &mdash; you will have real authority over real hardware in your first week, before you have the instincts that normally accompany it. That's what the safety chapter and the checklist are for: they're borrowed instincts, until yours arrive. Work through Parts I and II properly, keep the robot on its stand longer than feels necessary, and log everything. Then go build something that walks.
   </div>
+
+  <h2 class="chap" id="sources">Sources &amp; Further Reading <span class="n">— Appendix</span></h2>
+  <p class="intro">Vendor hardware documentation is scattered, versioned, and sometimes contradicts itself between the product page, the SDK repository, and integrator guides. This appendix names exactly which document each claim came from so you can re-check it against your own firmware. Where a specification varies by configuration &mdash; joint counts most of all &mdash; this book states the range and tells you to verify empirically, and Chapter 6 gives you the two-minute procedure for doing so.</p>
+
+  <div class="box warn">
+    <span class="h">Verify versions against your own system</span>
+    Every version number, command, and API signature here was checked against the sources below on <strong>11 August 2026</strong>. Software moves: distributions reach end of life, SDKs restructure, and keybindings change between releases. Where this book and the current official documentation disagree, <strong>the official documentation is right</strong> &mdash; and the link to it is in this appendix.
+  </div>
+
+  <h3>Manufacturer</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://www.unitree.com/g1/" target="_blank" rel="noopener noreferrer">Unitree G1 product page</a></td><td>Unitree Robotics</td><td><strong>Published specs in Chapter 1</strong> — 1320 mm standing, ~35 kg, 23 DoF standard / 23–43 EDU, 6 per leg, 5 per arm, 9000 mAh, ~2 h, 8-core CPU</td></tr>
+    <tr><td><a href="https://support.unitree.com/home/en/G1_developer/about_G1" target="_blank" rel="noopener noreferrer">G1 Developer documentation — About G1</a></td><td>Unitree Robotics</td><td>Joint layout straight from the vendor: <strong>5 DoF per arm, 6 per leg</strong> on the standard unit. Note this site blocks non-browser clients — open it in a browser, not <code>curl</code></td></tr>
+  </table>
+
+  <h3>SDK and middleware</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://github.com/unitreerobotics/unitree_sdk2_python" target="_blank" rel="noopener noreferrer">unitree_sdk2_python</a></td><td>Unitree Robotics / GitHub</td><td><strong>Install steps in Chapter 3</strong> — <code>pip3 install -e .</code>, the cyclonedds 0.10.2 pin, and passing the network interface as an argument</td></tr>
+    <tr><td><a href="https://github.com/unitreerobotics/unitree_sdk2" target="_blank" rel="noopener noreferrer">unitree_sdk2 (C++)</a></td><td>Unitree Robotics / GitHub</td><td>Message definitions, the <code>unitree_hg</code> vs <code>unitree_go</code> split, and the G1 examples</td></tr>
+    <tr><td><a href="https://github.com/unitreerobotics/unitree_ros2" target="_blank" rel="noopener noreferrer">unitree_ros2</a></td><td>Unitree Robotics / GitHub</td><td><strong>Chapter 9</strong> — the CycloneDDS XML interface config, <code>setup.sh</code> and <code>setup_local.sh</code></td></tr>
+    <tr><td><a href="https://github.com/eclipse-cyclonedds/cyclonedds" target="_blank" rel="noopener noreferrer">Eclipse CycloneDDS</a></td><td>Eclipse Foundation</td><td>The 0.10.x branch build steps used when the pip install fails</td></tr>
+    <tr><td><a href="https://github.com/unitreerobotics/xr_teleoperate/wiki/Motion" target="_blank" rel="noopener noreferrer">xr_teleoperate wiki — Motion</a></td><td>Unitree Robotics / GitHub</td><td><strong>The <code>rt/arm_sdk</code> weight mechanism</strong> — <code>motor_cmd[29].q</code> as a blend weight rather than a real joint</td></tr>
+  </table>
+
+  <h3>Integrator and lab guides</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://docs.westonrobot.com/tutorial/unitree/g1_dev_guide/" target="_blank" rel="noopener noreferrer">Unitree G1 Development Guide</a></td><td>Weston Robot</td><td><strong>Network layout in Chapter 2</strong> — the 192.168.123.0/24 subnet, .161 locomotion / .164 development, absence of DHCP, and debug-mode remote sequences</td></tr>
+    <tr><td><a href="https://roboticsknowledgebase.com/wiki/common-platforms/unitree-g1/" target="_blank" rel="noopener noreferrer">Unitree G1 — Robotics Knowledgebase</a></td><td>Carnegie Mellon University</td><td>Independent corroboration of the DDS topic names and control architecture</td></tr>
+    <tr><td><a href="https://huggingface.co/docs/lerobot/unitree_g1" target="_blank" rel="noopener noreferrer">LeRobot — Unitree G1</a></td><td>Hugging Face</td><td>Recording and dataset workflow on the G1</td></tr>
+  </table>
+
+  <h3>Context for Chapters 9 and 10</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Quality-of-Service-Settings.html" target="_blank" rel="noopener noreferrer">ROS 2 QoS and DDS concepts</a></td><td>Open Robotics</td><td>Why a ROS 2 bridge to a DDS-native SDK is possible at all</td></tr>
+    <tr><td><a href="https://mujoco.readthedocs.io/" target="_blank" rel="noopener noreferrer">MuJoCo documentation</a></td><td>Google DeepMind</td><td>The physics engine behind most G1 simulation</td></tr>
+  </table>
 
   <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
 

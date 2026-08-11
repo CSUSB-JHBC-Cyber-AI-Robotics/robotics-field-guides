@@ -228,6 +228,7 @@
       <a class="navlink" href="#ch14"><span class="check">&#10003;</span>14 &middot; Glossary</a>
       <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; The Whole Install</a>
       <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Verification Checklist</a>
+      <a class="navlink" href="#sources"><span class="check">&#10003;</span>&#128218; Sources &amp; Further Reading</a>
     </div>
   </div>
 </nav>
@@ -565,21 +566,29 @@ python3 -c "import requests"        # ModuleNotFoundError — correct!</code></p
   <h2 class="chap" id="ch7">Installing ROS 2 <span class="n">— Chapter 7</span></h2>
   <p class="intro">System-wide via apt, matched to your Ubuntu version. Skip this chapter if your robot's SDK speaks DDS directly and you don't need the ROS ecosystem.</p>
 
-  <pre><code># Locale — ROS 2 requires UTF-8
+  <pre><code># Locale — ROS 2 needs a UTF-8 locale
 sudo apt update &amp;&amp; sudo apt install -y locales
 sudo locale-gen en_US en_US.UTF-8
 sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+export LANG=en_US.UTF-8
 
-# Repository
-sudo add-apt-repository universe -y
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-    -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-    http://packages.ros.org/ros2/ubuntu $(. /etc/os-release &amp;&amp; echo $UBUNTU_CODENAME) main" \
-    | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+# Enable the universe repository
+sudo apt install -y software-properties-common curl
+sudo add-apt-repository universe
+
+# Add the ROS 2 apt source. This is the CURRENT method: a small .deb that
+# configures the repository and its signing key for you. Older guides tell you
+# to curl ros.key into /usr/share/keyrings by hand — that approach is superseded.
+export ROS_APT_SOURCE_VERSION=$(curl -s \
+  https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
+  | grep -F "tag_name" | awk -F'"' '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb \
+  "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release &amp;&amp; echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
 
 # Install
-sudo apt update &amp;&amp; sudo apt install -y ros-jazzy-desktop ros-dev-tools
+sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y ros-jazzy-desktop ros-dev-tools
 
 # Source it — required in EVERY new terminal
 source /opt/ros/jazzy/setup.bash</code></pre>
@@ -884,16 +893,28 @@ python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 python -m pip install --upgrade pip</code></pre>
 
   <h3>6 — ROS 2</h3>
-  <pre><code>sudo apt install -y locales
+  <pre><code>sudo apt update &amp;&amp; sudo apt install -y locales
 sudo locale-gen en_US en_US.UTF-8
 sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-sudo add-apt-repository universe -y
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-    -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-    http://packages.ros.org/ros2/ubuntu $(. /etc/os-release &amp;&amp; echo $UBUNTU_CODENAME) main" \
-    | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-sudo apt update &amp;&amp; sudo apt install -y ros-jazzy-desktop ros-dev-tools
+export LANG=en_US.UTF-8
+
+# Enable the universe repository
+sudo apt install -y software-properties-common curl
+sudo add-apt-repository universe
+
+# Add the ROS 2 apt source. This is the CURRENT method: a small .deb that
+# configures the repository and its signing key for you. Older guides tell you
+# to curl ros.key into /usr/share/keyrings by hand — that approach is superseded.
+export ROS_APT_SOURCE_VERSION=$(curl -s \
+  https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
+  | grep -F "tag_name" | awk -F'"' '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb \
+  "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release &amp;&amp; echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
+
+# Install and source
+sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y ros-jazzy-desktop ros-dev-tools
 source /opt/ros/jazzy/setup.bash</code></pre>
 
   <h3>7 — Vendor SDK</h3>
@@ -975,6 +996,51 @@ git add -A &amp;&amp; git commit -m "Working setup"</code></pre>
     <span class="h">A closing word</span>
     Installation is the least glamorous part of robotics and it consumes a genuinely absurd share of the field's collective time &mdash; largely because it's treated as a preliminary rather than as work, so nobody documents it and everybody redoes it. Treating it as work is the whole trick: an order, a verification at each step, and notes good enough that someone else could follow them. Do that once, properly, and you get a machine that keeps working and can be rebuilt in an hour instead of a day. You also get something less obvious but more useful &mdash; a real understanding of how the layers fit together, which is exactly the knowledge that lets you debug the strange failure six weeks from now. Then close this book and go do the robotics.
   </div>
+
+  <h2 class="chap" id="sources">Sources &amp; Further Reading <span class="n">— Appendix</span></h2>
+  <p class="intro">Installation guides age faster than anything else in this series, because they name exact versions and exact commands. Every command here was taken from the official installation documentation cited below rather than from a third-party tutorial &mdash; but check the upstream link before running a long install, because a repository URL or a package name may have changed since. The <em>method</em> in this book (dependency order, verify each layer, diagnose downward) does not age; the commands do.</p>
+
+  <div class="box warn">
+    <span class="h">Verify versions against your own system</span>
+    Every version number, command, and API signature here was checked against the sources below on <strong>11 August 2026</strong>. Software moves: distributions reach end of life, SDKs restructure, and keybindings change between releases. Where this book and the current official documentation disagree, <strong>the official documentation is right</strong> &mdash; and the link to it is in this appendix.
+  </div>
+
+  <h3>Operating system and toolchain</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://ubuntu.com/about/release-cycle" target="_blank" rel="noopener noreferrer">Ubuntu releases and LTS support windows</a></td><td>Canonical</td><td>Which Ubuntu LTS to choose, and how long it is supported (Chapter 1)</td></tr>
+    <tr><td><a href="https://ros.org/reps/rep-2000.html" target="_blank" rel="noopener noreferrer">REP 2000 — ROS 2 Releases and Target Platforms</a></td><td>ROS Infrastructure</td><td><strong>The Ubuntu ↔ ROS 2 pairing table in Chapter 1</strong> — the constraint that drives every other choice</td></tr>
+    <tr><td><a href="https://ubuntu.com/server/docs/nvidia-drivers-installation" target="_blank" rel="noopener noreferrer">Ubuntu drivers / NVIDIA driver installation</a></td><td>Canonical</td><td><code>ubuntu-drivers autoinstall</code> in Chapter 10</td></tr>
+  </table>
+
+  <h3>SSH and networking</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://man.openbsd.org/ssh_config" target="_blank" rel="noopener noreferrer">OpenSSH manual pages (ssh, ssh_config, ssh-keygen, scp)</a></td><td>OpenBSD / OpenSSH</td><td><strong>Chapter 4</strong> — <code>~/.ssh/config</code> options including <code>ServerAliveInterval</code> and <code>ForwardAgent</code></td></tr>
+    <tr><td><a href="https://documentation.ubuntu.com/server/how-to/security/openssh-server/" target="_blank" rel="noopener noreferrer">Ubuntu Server Guide — OpenSSH</a></td><td>Canonical</td><td>Key-based authentication setup and file permission requirements</td></tr>
+    <tr><td><a href="https://networkmanager.dev/docs/api/latest/nmcli.html" target="_blank" rel="noopener noreferrer">NetworkManager / nmcli documentation</a></td><td>GNOME / Red Hat</td><td>Persistent static-IP connection profiles in Chapter 5</td></tr>
+    <tr><td><a href="https://man7.org/linux/man-pages/man8/ip.8.html" target="_blank" rel="noopener noreferrer">iproute2 (ip) manual</a></td><td>Linux man-pages</td><td><code>ip addr</code>, <code>ip link</code>, <code>ip route</code> — the diagnostics in Chapter 5</td></tr>
+  </table>
+
+  <h3>Python and ROS 2</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://peps.python.org/pep-0668/" target="_blank" rel="noopener noreferrer">PEP 668 — externally managed environments</a></td><td>Python Software Foundation</td><td>Why <code>pip install</code> is blocked system-wide (Chapters 6 and 13)</td></tr>
+    <tr><td><a href="https://docs.python.org/3/library/venv.html" target="_blank" rel="noopener noreferrer">venv — Creation of virtual environments</a></td><td>Python docs</td><td><code>--system-site-packages</code>, the flag that makes ROS 2 visible in a venv</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html" target="_blank" rel="noopener noreferrer">Installing ROS 2 Jazzy on Ubuntu (deb packages)</a></td><td>Open Robotics</td><td><strong>Chapter 7 verbatim</strong> — locale, apt repository, keyring, and package names</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Configuring-ROS2-Environment.html" target="_blank" rel="noopener noreferrer">Configuring your ROS 2 environment</a></td><td>Open Robotics</td><td>Sourcing, and the tradeoff of putting it in <code>.bashrc</code></td></tr>
+  </table>
+
+  <h3>Vendor SDKs, simulation and GPU</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://github.com/unitreerobotics/unitree_sdk2_python" target="_blank" rel="noopener noreferrer">unitree_sdk2_python</a></td><td>Unitree Robotics / GitHub</td><td><strong>Chapter 8</strong> — the install, and the cyclonedds 0.10.2 requirement</td></tr>
+    <tr><td><a href="https://github.com/eclipse-cyclonedds/cyclonedds" target="_blank" rel="noopener noreferrer">Eclipse CycloneDDS</a></td><td>Eclipse Foundation</td><td>Building the 0.10.x branch and setting <code>CYCLONEDDS_HOME</code></td></tr>
+    <tr><td><a href="https://github.com/luckyrobots/luckyrobots" target="_blank" rel="noopener noreferrer">luckyrobots</a></td><td>Lucky Robots / GitHub</td><td>Simulator client install and <code>LUCKYENGINE_PATH</code> (Chapter 9)</td></tr>
+    <tr><td><a href="https://mujoco.readthedocs.io/en/stable/python.html" target="_blank" rel="noopener noreferrer">MuJoCo — Python bindings</a></td><td>Google DeepMind</td><td><code>pip install mujoco</code> and the viewer</td></tr>
+    <tr><td><a href="https://pytorch.org/get-started/locally/" target="_blank" rel="noopener noreferrer">PyTorch — Get Started locally</a></td><td>PyTorch Foundation</td><td><strong>Chapter 10</strong> — installing a CUDA-enabled build rather than a system CUDA toolkit</td></tr>
+    <tr><td><a href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/" target="_blank" rel="noopener noreferrer">NVIDIA CUDA Installation Guide for Linux</a></td><td>NVIDIA</td><td>Driver-vs-toolkit distinction, for the cases that genuinely need the toolkit</td></tr>
+  </table>
 
   <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
 

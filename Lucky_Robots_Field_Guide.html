@@ -229,6 +229,7 @@
       <a class="navlink" href="#ch13"><span class="check">&#10003;</span>13 &middot; Glossary</a>
       <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; API Cheat-Sheet</a>
       <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Choosing a Simulator</a>
+      <a class="navlink" href="#sources"><span class="check">&#10003;</span>&#128218; Sources &amp; Further Reading</a>
     </div>
   </div>
 </nav>
@@ -773,6 +774,50 @@ AsyncRobotController   # asyncio-native mirror</code></pre>
     <span class="h">A closing word</span>
     Simulation has quietly become the centre of gravity in robot learning &mdash; not because it's a substitute for hardware, but because it changes the economics of trying things. When an experiment costs a laptop-minute instead of a lab session, you run the experiment you were only going to think about, and that's where most progress actually comes from. Lucky Engine is a good instance of that shift: physics that's accurate enough to be worth trusting, rendering good enough for vision, and a Python interface plain enough to get out of the way. Use it to eliminate everything that would waste your hardware time, calibrate it against the real machine so it's modelling your robot rather than a generic one, and stay honest about the boundary in <a class="xref" href="#ch10">Chapter 10</a>. Then go and find out what the real robot thinks of your ideas.
   </div>
+
+  <h2 class="chap" id="sources">Sources &amp; Further Reading <span class="n">— Appendix</span></h2>
+  <p class="intro">Lucky Engine and its SDK are under active development, so this appendix is unusually important: the API surface described in this book was read off the package and repository below at a specific version, and it will move. Check <code>help()</code> on the objects and the installed package’s own README before assuming a signature here is current. The concepts &mdash; a stepped physics loop, policy slots, Gymnasium environments, sim-to-real &mdash; are stable; the spellings are not.</p>
+
+  <div class="box warn">
+    <span class="h">Verify versions against your own system</span>
+    Every version number, command, and API signature here was checked against the sources below on <strong>11 August 2026</strong>. Software moves: distributions reach end of life, SDKs restructure, and keybindings change between releases. Where this book and the current official documentation disagree, <strong>the official documentation is right</strong> &mdash; and the link to it is in this appendix.
+  </div>
+
+  <h3>Lucky Robots</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://pypi.org/project/luckyrobots/" target="_blank" rel="noopener noreferrer">luckyrobots on PyPI</a></td><td>Lucky Robots</td><td><strong>Version and Python requirement</strong> — 0.5.0, requires Python ≥3.10, MIT licensed</td></tr>
+    <tr><td><a href="https://github.com/luckyrobots/luckyrobots" target="_blank" rel="noopener noreferrer">luckyrobots — Python SDK for LuckyEngine</a></td><td>Lucky Robots / GitHub</td><td><strong>The entire API surface in this book</strong> — Session, LuckyEnv, RobotController, MujocoScene, policy slots, and the sysid CLI</td></tr>
+    <tr><td><a href="https://luckyrobots.readthedocs.io/" target="_blank" rel="noopener noreferrer">LuckyRobots documentation</a></td><td>Lucky Robots</td><td>Reference docs for the client and its gRPC surface</td></tr>
+    <tr><td><a href="https://github.com/luckyrobots/LuckyEngine-Public" target="_blank" rel="noopener noreferrer">LuckyEngine-Public</a></td><td>Lucky Robots / GitHub</td><td>The engine itself — editor, C# scripting, gRPC server</td></tr>
+    <tr><td><a href="https://luckyrobots.com/" target="_blank" rel="noopener noreferrer">luckyrobots.com</a></td><td>Lucky Robots</td><td>Engine downloads, supported robots, and the MuJoCo + Vulkan architecture described in Chapter 1</td></tr>
+  </table>
+
+  <h3>Underlying technology</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://mujoco.readthedocs.io/" target="_blank" rel="noopener noreferrer">MuJoCo documentation</a></td><td>Google DeepMind</td><td>Physics, timestep behaviour, and the meaning of <code>nq</code> and <code>nu</code></td></tr>
+    <tr><td><a href="https://mujoco.readthedocs.io/en/stable/XMLreference.html" target="_blank" rel="noopener noreferrer">MJCF modeling reference</a></td><td>Google DeepMind</td><td>The XML model format underneath every scene (Chapter 3)</td></tr>
+    <tr><td><a href="https://gymnasium.farama.org/" target="_blank" rel="noopener noreferrer">Gymnasium documentation</a></td><td>Farama Foundation</td><td><strong>The reset/step contract in Chapter 7</strong>, and the terminated-vs-truncated distinction</td></tr>
+    <tr><td><a href="https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/" target="_blank" rel="noopener noreferrer">Handling time limits in RL (terminated vs truncated)</a></td><td>Farama Foundation</td><td>Why conflating the two corrupts value bootstrapping</td></tr>
+    <tr><td><a href="https://github.com/huggingface/lerobot" target="_blank" rel="noopener noreferrer">LeRobot</a></td><td>Hugging Face</td><td>The dataset format Lucky Engine records into (Chapter 8)</td></tr>
+  </table>
+
+  <h3>Sim-to-real background</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://arxiv.org/abs/1703.06907" target="_blank" rel="noopener noreferrer">Domain Randomization for Transferring Deep Neural Networks from Simulation to the Real World</a></td><td>Tobin et al., IROS 2017 (arXiv)</td><td>The original domain-randomization result cited in Chapter 10</td></tr>
+    <tr><td><a href="https://arxiv.org/abs/2009.13303" target="_blank" rel="noopener noreferrer">Sim-to-Real Transfer in Deep Reinforcement Learning for Robotics: a Survey</a></td><td>Zhao, Queralta & Westerlund (arXiv)</td><td>Survey of the reality gap and the mitigations listed in Chapter 10</td></tr>
+    <tr><td><a href="https://arxiv.org/abs/1901.08652" target="_blank" rel="noopener noreferrer">Learning Agile and Dynamic Motor Skills for Legged Robots</a></td><td>Hwangbo et al., Science Robotics 2019 (arXiv)</td><td>Actuator-network system identification — the case for measuring before training</td></tr>
+  </table>
+
+  <h3>Alternatives compared in Appendix B</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://developer.nvidia.com/isaac/sim" target="_blank" rel="noopener noreferrer">NVIDIA Isaac Sim</a></td><td>NVIDIA</td><td>GPU-parallel simulation and photorealistic sensors</td></tr>
+    <tr><td><a href="https://gazebosim.org/docs" target="_blank" rel="noopener noreferrer">Gazebo</a></td><td>Open Robotics</td><td>The ROS-native simulator</td></tr>
+    <tr><td><a href="https://pybullet.org/wordpress/" target="_blank" rel="noopener noreferrer">PyBullet</a></td><td>Bullet Physics</td><td>Lightweight teaching-friendly option</td></tr>
+  </table>
 
   <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
 

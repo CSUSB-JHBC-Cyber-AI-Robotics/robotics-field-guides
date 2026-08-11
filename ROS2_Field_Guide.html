@@ -229,6 +229,7 @@
       <a class="navlink" href="#ch15"><span class="check">&#10003;</span>15 &middot; Glossary</a>
       <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; Command Cheat-Sheet</a>
       <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Common Message Types</a>
+      <a class="navlink" href="#sources"><span class="check">&#10003;</span>&#128218; Sources &amp; Further Reading</a>
     </div>
   </div>
 </nav>
@@ -297,13 +298,14 @@
   <h3>Distributions</h3>
   <p>ROS 2 ships as named <strong>distributions</strong>, each tied to an Ubuntu release. The pairing is strict, and choosing wrong is the single most common way to lose a first day:</p>
   <table>
-    <tr><th>Distribution</th><th>Ubuntu</th><th>Status</th></tr>
-    <tr><td><strong>Jazzy Jalisco</strong></td><td>24.04 LTS</td><td>LTS, supported to May 2029 — <strong>the safe default</strong></td></tr>
-    <tr><td>Humble Hawksbill</td><td>22.04 LTS</td><td>LTS, older; still very widely deployed</td></tr>
-    <tr><td>Kilted Kaiju</td><td>24.04 LTS</td><td>Non-LTS, shorter support window</td></tr>
-    <tr><td>Lyrical Luth</td><td>26.04 LTS</td><td>Newest; ecosystem still catching up</td></tr>
+    <tr><th>Distribution</th><th>Released</th><th>EOL</th><th>Tier&nbsp;1 Ubuntu</th><th>Status</th></tr>
+    <tr><td><strong>Jazzy Jalisco</strong></td><td>May 2024</td><td>May 2029</td><td>24.04 (Noble)</td><td>LTS — <strong>the safe default today</strong></td></tr>
+    <tr><td>Lyrical Luth</td><td>May 2026</td><td>May 2031</td><td>26.04</td><td>LTS, newest; ecosystem still catching up</td></tr>
+    <tr><td>Kilted Kaiju</td><td>May 2025</td><td>Nov 2026</td><td>24.04 (Noble)</td><td>Non-LTS, ~1.5 year window</td></tr>
+    <tr><td>Humble Hawksbill</td><td>May 2022</td><td>May 2027</td><td>22.04 (Jammy)</td><td>LTS, older; still very widely deployed</td></tr>
   </table>
-  <p>Pick the LTS that matches your Ubuntu, and match whatever your lab or the package you depend on uses. Mixing distributions on one machine is possible but not a thing to attempt while learning.</p>
+  <p>New distributions land every year on <strong>23 May</strong> (World Turtle Day); LTS releases get five years of support, non-LTS about eighteen months. Note that Jazzy and Kilted share Ubuntu 24.04 — a distribution has full Tier&nbsp;1 support for exactly one Ubuntu LTS, but one Ubuntu release can host more than one distribution.</p>
+  <p>Pick the LTS that matches your Ubuntu, and match whatever your lab or the package you depend on uses. As of this writing <strong>Jazzy is the conservative choice</strong>: deepest package ecosystem, four more years of support. Lyrical Luth is newer and also LTS, but third-party packages lag a fresh release by months. Mixing distributions on one machine is possible but not a thing to attempt while learning.</p>
 
   <h2 class="chap" id="ch2">Nodes &amp; the Graph <span class="n">— Chapter 2</span></h2>
   <p class="intro">A node is a program that does one job. The graph is every node currently running, plus every connection between them. That is the whole architecture, and it's worth holding in your head as a literal picture.</p>
@@ -427,22 +429,28 @@ ros2 action send_goal /fibonacci example_interfaces/action/Fibonacci "{order: 8}
 
   <h3>Install Jazzy on Ubuntu 24.04</h3>
   <pre><code># Locale — ROS 2 needs a UTF-8 locale
-sudo apt update &amp;&amp; sudo apt install locales
+sudo apt update &amp;&amp; sudo apt install -y locales
 sudo locale-gen en_US en_US.UTF-8
 sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+export LANG=en_US.UTF-8
 
-# Enable the universe repo and add the ROS 2 apt source
-sudo apt install software-properties-common curl -y
+# Enable the universe repository
+sudo apt install -y software-properties-common curl
 sudo add-apt-repository universe
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-  -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-  http://packages.ros.org/ros2/ubuntu $(. /etc/os-release &amp;&amp; echo $UBUNTU_CODENAME) main" \
-  | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# Add the ROS 2 apt source. This is the CURRENT method: a small .deb that
+# configures the repository and its signing key for you. Older guides tell you
+# to curl ros.key into /usr/share/keyrings by hand — that approach is superseded.
+export ROS_APT_SOURCE_VERSION=$(curl -s \
+  https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest \
+  | grep -F "tag_name" | awk -F'"' '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb \
+  "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release &amp;&amp; echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
 
 # Install — desktop includes rviz2 and the demo nodes
-sudo apt update &amp;&amp; sudo apt install ros-jazzy-desktop
-sudo apt install ros-dev-tools</code></pre>
+sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y ros-jazzy-desktop ros-dev-tools</code></pre>
 
   <h3>Sourcing — the step everyone forgets</h3>
   <p>ROS 2 is not on your PATH until you source its setup script, in every new terminal:</p>
@@ -675,7 +683,7 @@ fps = self.get_parameter('fps').get_parameter_value().integer_value</code></pre>
   <h3>Discovery and ROS_DOMAIN_ID</h3>
   <p>Nodes find each other by multicast on the local network. Two consequences follow, both of which surprise people in a shared lab:</p>
   <ul>
-    <li><strong>Everyone on the subnet shares a graph.</strong> Your classmate's <code>/cmd_vel</code> is your <code>/cmd_vel</code>. Set <code>ROS_DOMAIN_ID</code> to a number between 0 and 101 to partition yourself off &mdash; nodes only see nodes with the same ID.</li>
+    <li><strong>Everyone on the subnet shares a graph.</strong> Your classmate's <code>/cmd_vel</code> is your <code>/cmd_vel</code>. Set <code>ROS_DOMAIN_ID</code> to partition yourself off &mdash; nodes only see nodes with the same ID. Official guidance is to pick a value <strong>between 0 and 101 inclusive</strong>; on Linux those (and 215&ndash;232) avoid colliding with the kernel's ephemeral port range.</li>
     <li><strong>Discovery needs multicast.</strong> Many managed networks, VPNs, and Docker's default bridge block it. Nodes on the same machine work; nodes across machines never find each other.</li>
   </ul>
   <pre><code>export ROS_DOMAIN_ID=42                  # pick a number; set it in every terminal
@@ -945,6 +953,44 @@ ros2 doctor --report</code></pre>
     <span class="h">A closing word</span>
     ROS 2's difficulty is almost entirely front-loaded. The concepts are genuinely small &mdash; processes that broadcast on named channels, and tools to watch them &mdash; but there's a lot of surface area around them, and the failure modes are quiet in a way that punishes guessing. What gets you past it isn't memorizing commands; it's holding the graph in your head and reaching for <code>ros2 topic echo</code> before you reach for a theory. Everything in Part III exists for the day the model isn't enough, and that day comes for everyone. When it does, work the checklist rather than reasoning about it &mdash; the system isn't going to tell you anything, so you have to go and look. Then go build something that moves.
   </div>
+
+  <h2 class="chap" id="sources">Sources &amp; Further Reading <span class="n">— Appendix</span></h2>
+  <p class="intro">ROS 2 has a decade of ROS 1 material ranking well in search results, and a lot of it is actively misleading for ROS 2. Everything in this book is sourced from the official ROS 2 documentation and from REP 2000, which is the normative record of what each distribution targets. Release dates, EOL dates, and Ubuntu pairings in Chapter 1 come from REP 2000 directly.</p>
+
+  <div class="box warn">
+    <span class="h">Verify versions against your own system</span>
+    Every version number, command, and API signature here was checked against the sources below on <strong>11 August 2026</strong>. Software moves: distributions reach end of life, SDKs restructure, and keybindings change between releases. Where this book and the current official documentation disagree, <strong>the official documentation is right</strong> &mdash; and the link to it is in this appendix.
+  </div>
+
+  <h3>Normative references</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://ros.org/reps/rep-2000.html" target="_blank" rel="noopener noreferrer">REP 2000 — ROS 2 Releases and Target Platforms</a></td><td>ROS Infrastructure</td><td><strong>The distribution table in Chapter 1.</strong> Release/EOL dates, Tier 1 Ubuntu and Python per distro</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/rolling/Releases.html" target="_blank" rel="noopener noreferrer">ROS 2 Releases and distributions</a></td><td>Open Robotics</td><td>Release cadence (23 May), LTS vs non-LTS support windows</td></tr>
+    <tr><td><a href="https://ros.org/reps/rep-2001.html" target="_blank" rel="noopener noreferrer">REP 2001 — ROS 2 Variants</a></td><td>ROS Infrastructure</td><td>What <code>ros-jazzy-desktop</code> actually contains</td></tr>
+  </table>
+
+  <h3>Core concepts</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Quality-of-Service-Settings.html" target="_blank" rel="noopener noreferrer">About Quality of Service settings</a></td><td>Open Robotics</td><td><strong>The QoS compatibility tables in Chapter 10</strong> — reliability and durability, verbatim</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Domain-ID.html" target="_blank" rel="noopener noreferrer">About Domain ID</a></td><td>Open Robotics</td><td>The 0–101 recommendation and the Linux ephemeral-port reasoning</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Concepts/Basic.html" target="_blank" rel="noopener noreferrer">Nodes, Topics, Services, Actions, Parameters</a></td><td>Open Robotics</td><td>The conceptual model in Part I</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Different-Middleware-Vendors.html" target="_blank" rel="noopener noreferrer">About RMW implementations / DDS</a></td><td>Open Robotics</td><td>Why ROS 2 topics are DDS topics, and how a non-ROS program can interoperate</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Tf2.html" target="_blank" rel="noopener noreferrer">About tf2</a></td><td>Open Robotics</td><td>The frame tree and extrapolation errors in Chapter 11</td></tr>
+  </table>
+
+  <h3>Tutorials and tooling</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html" target="_blank" rel="noopener noreferrer">Installing ROS 2 Jazzy on Ubuntu (deb packages)</a></td><td>Open Robotics</td><td>The install commands in Chapter 5, including locale setup</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html" target="_blank" rel="noopener noreferrer">Creating a workspace / Creating a package</a></td><td>Open Robotics</td><td>Workspace layout, underlay/overlay, sourcing order</td></tr>
+    <tr><td><a href="https://colcon.readthedocs.io/" target="_blank" rel="noopener noreferrer">colcon documentation</a></td><td>colcon project</td><td><code>--symlink-install</code>, <code>--packages-select</code>, and building from the workspace root</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/p/rclpy/" target="_blank" rel="noopener noreferrer">rclpy API documentation</a></td><td>Open Robotics</td><td>Node, publisher, subscription, timer and executor APIs in Chapter 7</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Launch/Creating-Launch-Files.html" target="_blank" rel="noopener noreferrer">Launch file tutorials</a></td><td>Open Robotics</td><td>Launch descriptions, parameters and remapping in Chapter 9</td></tr>
+    <tr><td><a href="https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html" target="_blank" rel="noopener noreferrer">Recording and playing back data (ros2 bag)</a></td><td>Open Robotics</td><td>Chapter 12</td></tr>
+    <tr><td><a href="https://github.com/ros2/common_interfaces" target="_blank" rel="noopener noreferrer">common_interfaces (std_msgs, sensor_msgs, geometry_msgs, nav_msgs)</a></td><td>ROS 2 / GitHub</td><td><strong>Appendix B</strong> — the message definitions, as shipped</td></tr>
+  </table>
 
   <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
 
