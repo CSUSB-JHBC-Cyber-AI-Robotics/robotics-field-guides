@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A practical guide to ROS 2 — nodes, topics, services, actions, the DDS layer underneath, workspaces and colcon, launch files, TF2, rviz2, and the command-line tools for inspecting a running robot.">
+<title>The ROS 2 Field Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --panel3:#222b3a;
+    --ink:#c9d1d9; --dim:#8b949e; --faint:#6e7681;
+    --cyan:#39d0d8; --orange:#ff9e44; --green:#56d364; --red:#f47272;
+    --amber:#e3b341; --purple:#bc8cff; --blue:#6cb6ff; --pink:#f778ba;
+    --line:#30363d; --code:#0b1622; --sel:#1f6feb44;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+    --fs:16px; --navw:316px; --topbarh:50px;
+    --accent:var(--orange);
+  }
+  html[data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef1f5; --panel3:#e4e9f0;
+    --ink:#1f2328; --dim:#57606a; --faint:#818b98;
+    --cyan:#0b8c97; --orange:#bc5d18; --green:#1a7f37; --red:#cf222e;
+    --amber:#9a6700; --purple:#8250df; --blue:#0969da; --pink:#bf3989;
+    --line:#d0d7de; --code:#f3f5f8; --sel:#0969da22;
+    --shadow:0 8px 30px rgba(140,149,159,.25);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  ::selection{background:var(--sel)}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.65;font-size:var(--fs);transition:background .25s ease,color .25s ease}
+  a{color:var(--accent)}
+  /* ---- commit-graph theme backdrop ---- */
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%23ff9e44' stroke-width='1.5' opacity='0.5'%3E%3Cpath d='M34 0 V120'/%3E%3Cpath d='M34 30 C34 44 78 42 78 56 C78 70 34 68 34 82'/%3E%3C/g%3E%3Cg fill='%23ff9e44' opacity='0.65'%3E%3Ccircle cx='34' cy='16' r='3'/%3E%3Ccircle cx='34' cy='100' r='3'/%3E%3Ccircle cx='78' cy='56' r='3'/%3E%3C/g%3E%3C/svg%3E");background-size:120px 120px;background-repeat:repeat}
+  html[data-theme="light"] #fx{opacity:.07}
+  /* ---- engine ---- */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--orange),var(--red));z-index:60;transition:width .1s linear}
+  #topbar{position:fixed;top:0;left:var(--navw);right:0;height:var(--topbarh);z-index:45;display:flex;align-items:center;gap:10px;padding:0 20px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  #topbar .crumb{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  #topbar .crumb b{color:var(--ink)}
+  #topbar button,#topbar .kbtn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);height:32px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;transition:all .15s ease}
+  #topbar button:hover,#topbar .kbtn:hover{border-color:var(--accent);color:var(--accent)}
+  #topbar .icobtn{width:32px;padding:0;justify-content:center;font-size:15px}
+  #hamburger{display:none}
+  .kbtn .k{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  #nav{position:fixed;top:0;left:0;width:var(--navw);height:100vh;overflow-y:auto;background:color-mix(in srgb,var(--panel) 92%,transparent);border-right:1px solid var(--line);padding:16px 12px 80px;z-index:50;backdrop-filter:blur(6px);scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .25s ease}
+  #nav::-webkit-scrollbar{width:9px}#nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+  #nav .brand{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+  #nav .brand .logo{width:28px;height:28px;flex:none}
+  #nav h1{font-size:14px;color:var(--accent);margin:0;letter-spacing:.3px}
+  #nav .sub{font-size:11px;color:var(--dim);margin:2px 0 10px 37px}
+  #navsearch{width:100%;background:var(--code);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px 8px 30px;font-size:12.5px;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+  #navsearch:focus{outline:none;border-color:var(--accent)}
+  #readbar{margin:10px 2px 6px;font-size:11px;color:var(--dim)}
+  #readbar .track{height:5px;background:var(--panel3);border-radius:3px;margin-top:4px;overflow:hidden}
+  #readbar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .3s ease}
+  .navpart{margin-top:8px}
+  button.part{width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--purple);font-weight:700;padding:8px 6px 4px;display:flex;align-items:center;justify-content:space-between;font-family:inherit}
+  button.part:hover{color:var(--accent)}
+  button.part .caret{transition:transform .2s ease;font-size:9px;color:var(--faint)}
+  .navpart.collapsed button.part .caret{transform:rotate(-90deg)}
+  .navlinks{overflow:hidden;transition:max-height .25s ease;max-height:2400px}
+  .navpart.collapsed .navlinks{max-height:0}
+  a.navlink{display:flex;align-items:center;gap:7px;color:var(--dim);text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px;border-left:2px solid transparent;line-height:1.4;transition:all .12s ease}
+  a.navlink:hover{color:var(--ink);background:var(--panel2)}
+  a.navlink.active{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+  a.navlink.hidden{display:none}
+  a.navlink .check{width:14px;height:14px;flex:none;border:1.5px solid var(--line);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all .15s ease}
+  a.navlink.read .check{background:var(--green);border-color:var(--green);color:#04210c}
+  a.navlink.read{color:var(--faint)}
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:46;opacity:0;pointer-events:none;transition:opacity .25s}
+  body.navopen #scrim{opacity:1;pointer-events:auto}
+  #wrap{position:relative;z-index:1;margin-left:var(--navw);padding:calc(var(--topbarh) + 4px) 40px 0}
+  .content{max-width:880px;margin:0 auto;padding:30px 0 140px}
+  h2.chap{font-size:29px;color:var(--accent);border-bottom:2px solid var(--accent);padding-bottom:8px;margin:64px 0 4px;scroll-margin-top:64px;position:relative}
+  h2.chap .n{color:var(--faint);font-size:17px;font-weight:400}
+  .readtime{font-size:12px;color:var(--faint);margin:0 0 14px;display:flex;align-items:center;gap:6px}
+  h2.part-divider{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:var(--purple);margin:80px 0 0;padding:0;border:none;scroll-margin-top:64px;font-weight:700}
+  h3{font-size:20px;color:var(--orange);margin:34px 0 8px;scroll-margin-top:64px}
+  h4{font-size:15px;color:var(--purple);margin:22px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  .anchor{opacity:0;margin-left:8px;font-size:.7em;text-decoration:none;color:var(--faint);transition:opacity .15s}
+  h2.chap:hover .anchor,h3:hover .anchor{opacity:1}
+  p{margin:10px 0}ul,ol{margin:10px 0;padding-left:24px}li{margin:5px 0}
+  strong{color:var(--ink);font-weight:600}html[data-theme="dark"] strong{color:#e6edf3}em{color:var(--ink)}
+  code{background:var(--code);color:var(--accent);padding:1px 6px;border-radius:4px;font-family:'Consolas','Courier New',monospace;font-size:13.5px}
+  .codewrap{position:relative;margin:14px 0}
+  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0}
+  pre code{background:none;color:#d6e3f0;padding:0;font-size:13.5px;line-height:1.55}
+  pre .c{color:var(--faint)}pre .k{color:var(--orange)}pre .o{color:var(--green)}pre .a{color:var(--amber)}
+  .copybtn{position:absolute;top:8px;right:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;font-size:11px;padding:3px 9px;cursor:pointer;opacity:0;transition:all .15s;font-family:inherit}
+  .codewrap:hover .copybtn{opacity:1}.copybtn:hover{border-color:var(--accent);color:var(--accent)}.copybtn.done{color:var(--green);border-color:var(--green)}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent)}
+  tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+  table.lookup th{position:sticky;top:var(--topbarh);z-index:2}
+  .box{border-radius:10px;padding:12px 16px;margin:16px 0;border-left:4px solid;position:relative;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+  .box .h{font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:12px;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .box .h::before{font-size:14px;font-family:'Segoe UI Emoji',sans-serif}
+  .field{border-color:var(--cyan)}.field .h{color:var(--cyan)}.field .h::before{content:"\1F500"}
+  .tip{border-color:var(--green)}.tip .h{color:var(--green)}.tip .h::before{content:"\1F4A1"}
+  .warn{border-color:var(--amber)}.warn .h{color:var(--amber)}.warn .h::before{content:"\26A0\FE0F"}
+  .danger{border-color:var(--red)}.danger .h{color:var(--red)}.danger .h::before{content:"\1F6D1"}
+  .lab{border-color:var(--purple)}.lab .h{color:var(--purple)}.lab .h::before{content:"\1F9EA"}
+  .case{border-color:var(--blue)}.case .h{color:var(--blue)}.case .h::before{content:"\1F4DC"}
+  .cmd{border-color:var(--orange)}.cmd .h{color:var(--orange)}.cmd .h::before{content:"\2328\FE0F"}
+  .intro{font-size:15px;color:var(--dim);font-style:italic;border-left:3px solid var(--line);padding-left:14px;margin:8px 0 20px}
+  .cover{padding:30px 0 22px;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .cover h1{font-size:44px;color:var(--accent);margin:0 0 6px;letter-spacing:.5px;background:linear-gradient(90deg,var(--orange),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .cover .tag{font-size:18px;color:var(--orange);margin-bottom:18px}
+  .cover .by{font-size:14px;color:var(--dim)}
+  .cover .ed{font-size:12px;color:var(--faint);margin-top:14px;letter-spacing:.5px}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:monospace}
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0}
+  a.xref{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)}a.xref:hover{border-bottom-style:solid}
+  figure{margin:22px 0;text-align:center}
+  figure svg{max-width:100%;height:auto;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px}
+  figcaption{font-size:12.5px;color:var(--dim);margin-top:8px;font-style:italic}
+  svg text{font-family:'Segoe UI',system-ui,sans-serif}
+  svg .box-f{fill:var(--panel2);stroke:var(--orange);stroke-width:1.5}
+  svg .box-w{fill:var(--panel2);stroke:var(--amber);stroke-width:1.5}
+  svg .box-d{fill:var(--panel2);stroke:var(--red);stroke-width:1.5}
+  svg .box-b{fill:var(--panel2);stroke:var(--blue);stroke-width:1.5}
+  svg .box-g{fill:var(--panel2);stroke:var(--green);stroke-width:1.5}
+  svg .box-v{fill:var(--panel2);stroke:var(--purple);stroke-width:1.5}
+  svg .lbl{fill:var(--ink);font-size:13px}svg .lbl-s{fill:var(--dim);font-size:11px}svg .lbl-t{fill:var(--orange);font-size:13px;font-weight:700}
+  svg .arr{stroke:var(--dim);stroke-width:1.5;fill:none}svg .arrm{stroke:var(--ink);stroke-width:1.5;fill:none}
+  .pager{display:flex;gap:14px;margin:50px 0 0;border-top:1px solid var(--line);padding-top:22px}
+  .pager a{flex:1;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:12px 16px;color:var(--ink);transition:all .15s ease;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+  .pager a:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .pager .dir{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .pager .ttl{font-size:14px;color:var(--accent);margin-top:3px}.pager .next{text-align:right}.pager .empty{visibility:hidden}
+  #palette{position:fixed;inset:0;z-index:70;display:none;align-items:flex-start;justify-content:center;background:rgba(1,4,9,.6);backdrop-filter:blur(3px);padding-top:12vh}
+  #palette.open{display:flex}
+  #palbox{width:min(620px,92vw);max-height:70vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  #palinput{border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:16px;padding:16px 18px;font-family:inherit;outline:none}
+  #palresults{overflow-y:auto;padding:6px}
+  .palitem{display:flex;align-items:baseline;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer}
+  .palitem .lvl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);min-width:46px}
+  .palitem .txt{font-size:14px;color:var(--ink)}.palitem .ctx{font-size:11px;color:var(--faint);margin-left:auto}
+  .palitem.sel,.palitem:hover{background:var(--panel2)}.palitem.sel .txt{color:var(--accent)}
+  #palhint{padding:8px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);display:flex;gap:14px}#palhint b{color:var(--dim);font-weight:600}
+  .backtop{position:fixed;bottom:22px;right:24px;background:var(--panel2);border:1px solid var(--line);color:var(--accent);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:17px;opacity:0;pointer-events:none;transition:opacity .25s,transform .15s;z-index:40;box-shadow:var(--shadow)}
+  .backtop.show{opacity:.9;pointer-events:auto}.backtop:hover{opacity:1;transform:translateY(-3px)}
+  @media(max-width:980px){:root{--navw:0px}#nav{transform:translateX(-105%);width:300px;box-shadow:var(--shadow)}body.navopen #nav{transform:translateX(0)}#topbar{left:0}#hamburger{display:inline-flex}#wrap{padding-left:18px;padding-right:18px}}
+  @media print{#nav,#topbar,#progress,.backtop,.copybtn,.pager,.anchor,#fx{display:none!important}#wrap{margin:0;padding:0}}
+</style>
+
+<style>
+  :root{--accent:var(--green)}
+  #progress,#readbar .fill{background:linear-gradient(90deg,var(--green),var(--cyan))}
+  .cover h1{background:linear-gradient(90deg,var(--green),var(--cyan))}
+  .cover .tag{color:var(--green)}
+  h3{color:var(--green)}
+  h4,h2.part-divider,button.part{color:var(--cyan)}
+  pre .k{color:var(--green)}
+  .cmd{border-color:var(--green)}.cmd .h{color:var(--green)}
+  .lab{border-color:var(--cyan)}.lab .h{color:var(--cyan)}
+  svg .box-f{stroke:var(--green)}svg .lbl-t{fill:var(--green)}
+  svg .box-v{stroke:var(--cyan)}
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35;
+    background-image:radial-gradient(circle,rgba(86,211,100,.5) 1.2px,transparent 1.2px);
+    background-size:46px 46px}
+  html[data-theme="light"] #fx{opacity:.2}
+</style>
+
+<style>
+  /* links to Field Guides that live outside this site — kept readable, not clickable */
+  .xref-offsite{color:var(--dim);border-bottom:1px dotted var(--faint);cursor:help}
+</style>
+</head>
+<body>
+<div id="fx" aria-hidden="true"></div>
+<div id="progress"></div>
+
+<nav id="nav">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="16" cy="16" r="4" fill="none" stroke="var(--green)" stroke-width="2"/>
+      <circle cx="6" cy="7" r="2.6" fill="none" stroke="var(--cyan)" stroke-width="1.8"/>
+      <circle cx="26" cy="7" r="2.6" fill="none" stroke="var(--cyan)" stroke-width="1.8"/>
+      <circle cx="6" cy="25" r="2.6" fill="none" stroke="var(--cyan)" stroke-width="1.8"/>
+      <circle cx="26" cy="25" r="2.6" fill="none" stroke="var(--cyan)" stroke-width="1.8"/>
+      <path d="M8.2 8.8 L13 13.2 M23.8 8.8 L19 13.2 M8.2 23.2 L13 18.8 M23.8 23.2 L19 18.8" stroke="var(--green)" stroke-width="1.5"/>
+    </svg>
+    <h1>ROS 2 FIELD GUIDE</h1>
+  </div>
+  <div class="sub">Nodes, Topics &amp; the Robot Nervous System</div>
+  <input id="navsearch" type="text" placeholder="Filter chapters&hellip;" autocomplete="off" spellcheck="false">
+  <div id="readbar"><span id="readlabel">0 of 0 read</span><div class="track"><div class="fill" id="readfill"></div></div></div>
+
+  <div class="navpart">
+    <button class="part">Front Matter <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#how-to-read"><span class="check">&#10003;</span>How to Read This Book</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part I &mdash; The Model <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch1"><span class="check">&#10003;</span>1 &middot; What ROS 2 Is</a>
+      <a class="navlink" href="#ch2"><span class="check">&#10003;</span>2 &middot; Nodes &amp; the Graph</a>
+      <a class="navlink" href="#ch3"><span class="check">&#10003;</span>3 &middot; Topics &amp; Messages</a>
+      <a class="navlink" href="#ch4"><span class="check">&#10003;</span>4 &middot; Services &amp; Actions</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part II &mdash; Working with a Robot <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch5"><span class="check">&#10003;</span>5 &middot; Installing ROS 2</a>
+      <a class="navlink" href="#ch6"><span class="check">&#10003;</span>6 &middot; The CLI Toolkit</a>
+      <a class="navlink" href="#ch7"><span class="check">&#10003;</span>7 &middot; Writing Nodes in Python</a>
+      <a class="navlink" href="#ch8"><span class="check">&#10003;</span>8 &middot; Workspaces &amp; colcon</a>
+      <a class="navlink" href="#ch9"><span class="check">&#10003;</span>9 &middot; Launch Files &amp; Parameters</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part III &mdash; The Layer Underneath <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch10"><span class="check">&#10003;</span>10 &middot; DDS, QoS &amp; Discovery</a>
+      <a class="navlink" href="#ch11"><span class="check">&#10003;</span>11 &middot; TF2 &mdash; Coordinate Frames</a>
+      <a class="navlink" href="#ch12"><span class="check">&#10003;</span>12 &middot; Visualizing &amp; Recording</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part IV &mdash; Practice &amp; Reference <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch13"><span class="check">&#10003;</span>13 &middot; Troubleshooting</a>
+      <a class="navlink" href="#ch14"><span class="check">&#10003;</span>14 &middot; Lab Exercises</a>
+      <a class="navlink" href="#ch15"><span class="check">&#10003;</span>15 &middot; Glossary</a>
+      <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; Command Cheat-Sheet</a>
+      <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Common Message Types</a>
+    </div>
+  </div>
+</nav>
+
+<div id="scrim"></div>
+
+<header id="topbar">
+  <button id="hamburger" class="icobtn" title="Menu" aria-label="Toggle navigation">&#9776;</button>
+  <div class="crumb" id="crumb">The ROS 2 Field Guide</div>
+  <button class="kbtn" id="palbtn" title="Search everything (Ctrl-K)"><span>&#128269; Search</span> <span class="k">Ctrl K</span></button>
+  <button class="icobtn" id="fsdown" title="Smaller text">A&#8722;</button>
+  <button class="icobtn" id="fsup" title="Larger text">A+</button>
+  <button class="icobtn" id="themebtn" title="Toggle light/dark">&#9789;</button>
+</header>
+
+<div id="wrap">
+<div class="content">
+
+  <div class="cover">
+    <h1>The ROS 2 Field Guide</h1>
+    <div class="tag">Nodes, Topics &amp; the Robot Nervous System</div>
+    <div class="by">A robot is not one program. It is dozens of small programs &mdash; one reading a camera, one estimating where the body is, one deciding where to step, one driving motors &mdash; all running at once and constantly telling each other what they know. ROS 2 is the plumbing that lets them do that without any of them knowing the others exist. This book teaches the publish&ndash;subscribe model at the centre of it, the command-line tools that let you eavesdrop on a live robot, and enough of the DDS layer underneath to debug the day it stops working.</div>
+    <div class="ed">A companion in the Field Guide series &middot; pairs with the Unitree G1 &amp; Networking guides &middot; offline, self-contained</div>
+  </div>
+
+<div class="box tip">
+    <span class="h">This book is interactive</span>
+    Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to search every heading; tick the sidebar <strong>checkboxes</strong> to track progress (or press <kbd>R</kbd>); use <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> to move chapter to chapter; toggle light/dark and text size top-right; hover any command block to <strong>copy</strong> it. Look for <span style="color:var(--green)">&#x2328;&#xFE0F; Try it</span> boxes &mdash; almost all of them run on a laptop with no robot attached, using the demo nodes ROS 2 ships with. Everything works offline.
+  </div>
+
+  <h2 class="chap" id="how-to-read">How to Read This Book <span class="n">— Front Matter</span></h2>
+  <p class="intro">ROS 2 has a reputation for a steep learning curve, and it's half deserved: the ideas are genuinely simple, but the tooling around them is large and the documentation assumes you already know the shape of the thing. This book front-loads the shape.</p>
+
+  <div class="box field">
+    <span class="h">The journey, part by part</span>
+    <strong>Part I (The Model)</strong> is the conceptual core and the part that transfers everywhere &mdash; nodes, the graph, topics, messages, services, actions. Read it properly; everything else is mechanics. <strong>Part II (Working with a Robot)</strong> is the hands-on half: installing, the command-line tools that let you inspect a live system, writing your first nodes in Python, building a workspace with colcon, and launch files. <strong>Part III (The Layer Underneath)</strong> is what separates people who can use ROS 2 from people who can fix it &mdash; DDS and QoS, coordinate frames, and the visualization and recording tools. <strong>Part IV</strong> is troubleshooting, labs, and reference.
+  </div>
+
+  <div class="box tip">
+    <span class="h">How to actually use it</span>
+    You do not need a robot. ROS 2 installs on any Ubuntu machine and ships with demo nodes, and nearly every exercise in this book runs entirely on a laptop &mdash; which is the right way to learn, because a robot adds hardware failures to your software confusion. Open two or three terminals and keep them open; multi-terminal work is simply how ROS 2 is used. If you're coming to this from the <a class="xref" href="Unitree_G1_Field_Guide.html#ch3">Unitree G1 guide</a>, note that the G1's own SDK speaks DDS directly rather than going through ROS 2 &mdash; <a class="xref" href="#ch10">Chapter 10</a> explains how those two worlds relate, and it's worth reading early.
+  </div>
+
+  <div class="box warn">
+    <span class="h">ROS 1 answers will mislead you</span>
+    There is a decade of ROS 1 material online and it ranks well in search results. ROS 2 is a ground-up rewrite: there is no <code>roscore</code>, <code>catkin_make</code> is now <code>colcon build</code>, <code>rosrun</code> is <code>ros2 run</code>, and the whole networking layer was replaced with DDS. If a tutorial mentions <code>roscore</code> or <code>catkin</code>, it is for ROS 1 and following it will waste your afternoon. Check that anything you read names a ROS 2 distribution &mdash; Humble, Jazzy, Kilted &mdash; before you trust it.
+  </div>
+
+  <h2 class="part-divider" id="partI">Part I — The Model</h2>
+
+  <h2 class="chap" id="ch1">What ROS 2 Is <span class="n">— Chapter 1</span></h2>
+  <p class="intro">The name is misleading in a way that's worth clearing up in the first paragraph: ROS is not an operating system, and understanding what it actually is makes the rest of the system much easier to reason about.</p>
+
+  <h3>Middleware, plus a toolbox, plus conventions</h3>
+  <p>ROS 2 is three things stacked together:</p>
+  <ul>
+    <li><strong>Middleware</strong> &mdash; a way for separate programs to send each other structured messages without knowing anything about each other. This is the heart of it.</li>
+    <li><strong>A toolbox</strong> &mdash; command-line tools to inspect a running system, a build system, a visualizer, a recorder, a coordinate-frame library.</li>
+    <li><strong>Conventions</strong> &mdash; agreed message formats and topic names, so a LIDAR driver from one vendor and a mapping package from another can be connected without either author having met.</li>
+  </ul>
+  <p>That third point is the real reason ROS won. When every robot's camera publishes <code>sensor_msgs/msg/Image</code>, any package that consumes images works with any camera. The ecosystem effect &mdash; the thousands of existing packages for navigation, manipulation, perception, simulation &mdash; is what you're really adopting.</p>
+
+  <h3>The problem it solves</h3>
+  <p>Write a robot as one big program and you get something that cannot be debugged, cannot be reused, and dies entirely when any part of it crashes. Split it into separate processes and you inherit a new problem: they need to talk, across processes and often across machines, at high rates, without blocking each other. Solving that well &mdash; serialization, discovery, transport, reliability, timing &mdash; is months of work you'd rather not repeat per project. ROS 2 is that work, done once.</p>
+
+  <h3>Distributions</h3>
+  <p>ROS 2 ships as named <strong>distributions</strong>, each tied to an Ubuntu release. The pairing is strict, and choosing wrong is the single most common way to lose a first day:</p>
+  <table>
+    <tr><th>Distribution</th><th>Ubuntu</th><th>Status</th></tr>
+    <tr><td><strong>Jazzy Jalisco</strong></td><td>24.04 LTS</td><td>LTS, supported to May 2029 — <strong>the safe default</strong></td></tr>
+    <tr><td>Humble Hawksbill</td><td>22.04 LTS</td><td>LTS, older; still very widely deployed</td></tr>
+    <tr><td>Kilted Kaiju</td><td>24.04 LTS</td><td>Non-LTS, shorter support window</td></tr>
+    <tr><td>Lyrical Luth</td><td>26.04 LTS</td><td>Newest; ecosystem still catching up</td></tr>
+  </table>
+  <p>Pick the LTS that matches your Ubuntu, and match whatever your lab or the package you depend on uses. Mixing distributions on one machine is possible but not a thing to attempt while learning.</p>
+
+  <h2 class="chap" id="ch2">Nodes &amp; the Graph <span class="n">— Chapter 2</span></h2>
+  <p class="intro">A node is a program that does one job. The graph is every node currently running, plus every connection between them. That is the whole architecture, and it's worth holding in your head as a literal picture.</p>
+
+  <h3>Nodes</h3>
+  <p>A <strong>node</strong> is a single process with a name, doing one thing: <code>/camera_driver</code>, <code>/face_detector</code>, <code>/joint_controller</code>. The design principle is one responsibility per node, and it buys you real things &mdash; you can restart one node without touching the rest, run it on a different machine by changing nothing, swap a simulated driver for a real one, and test each piece alone.</p>
+
+  <h3>The graph</h3>
+  <figure>
+  <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A ROS 2 graph: camera and lidar nodes publishing to topics consumed by a perception node, which publishes to a controller">
+    <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--green)"/></marker></defs>
+    <rect x="14" y="24" width="118" height="42" rx="8" fill="none" stroke="var(--cyan)"/>
+    <text x="73" y="50" text-anchor="middle" fill="var(--cyan)" font-size="12">/camera</text>
+    <rect x="14" y="150" width="118" height="42" rx="8" fill="none" stroke="var(--cyan)"/>
+    <text x="73" y="176" text-anchor="middle" fill="var(--cyan)" font-size="12">/lidar</text>
+
+    <text x="228" y="40" text-anchor="middle" fill="var(--amber)" font-size="11">/image_raw</text>
+    <text x="228" y="166" text-anchor="middle" fill="var(--amber)" font-size="11">/scan</text>
+    <line x1="134" y1="52" x2="322" y2="98" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="134" y1="166" x2="322" y2="122" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar)"/>
+
+    <rect x="326" y="86" width="128" height="48" rx="8" fill="none" stroke="var(--green)" stroke-width="1.8"/>
+    <text x="390" y="107" text-anchor="middle" fill="var(--green)" font-size="12">/perception</text>
+    <text x="390" y="123" text-anchor="middle" fill="var(--faint)" font-size="10">subscribes to both</text>
+
+    <text x="510" y="98" text-anchor="middle" fill="var(--amber)" font-size="11">/cmd_vel</text>
+    <line x1="456" y1="110" x2="556" y2="110" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar)"/>
+    <rect x="504" y="150" width="104" height="42" rx="8" fill="none" stroke="var(--cyan)"/>
+    <text x="556" y="176" text-anchor="middle" fill="var(--cyan)" font-size="12">/controller</text>
+    <line x1="556" y1="118" x2="556" y2="148" stroke="var(--green)" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="310" y="228" text-anchor="middle" fill="var(--faint)" font-size="10" font-style="italic">no node knows any other node exists — they only know topic names</text>
+  </svg>
+  <figcaption>A small graph. Nodes are processes; the labelled arrows are topics. <code>/perception</code> has no idea whether its images come from a real camera or a simulator.</figcaption>
+  </figure>
+
+  <h3>Decoupling is the point</h3>
+  <p>Nodes never address each other. <code>/camera</code> publishes to <code>/image_raw</code> and does not know or care who is listening &mdash; zero subscribers, or five. <code>/perception</code> subscribes to <code>/image_raw</code> and does not know what is producing it. This <strong>decoupling</strong> is what makes the whole thing work:</p>
+  <ul>
+    <li>Replace the real camera with a simulator or a recorded log &mdash; nothing downstream changes.</li>
+    <li>Add a recorder or a visualizer to any topic at runtime, without modifying a line of anyone's code.</li>
+    <li>Move a node to another machine; it finds its peers automatically (<a class="xref" href="#ch10">Chapter 10</a>).</li>
+    <li>Debug by inserting yourself into the graph as just another subscriber &mdash; which is exactly what <code>ros2 topic echo</code> is.</li>
+  </ul>
+
+  <h3>No master</h3>
+  <p>ROS 1 had <code>roscore</code>, a central registry every node connected through &mdash; and a single point of failure. ROS 2 has no master. Nodes discover each other by broadcasting on the network via DDS (<a class="xref" href="#ch10">Chapter 10</a>). Start nodes in any order; they'll find each other when they appear. This is a genuine improvement and also the source of ROS 2's most confusing failure mode: when discovery silently doesn't happen, everything looks fine and nothing connects.</p>
+
+  <h2 class="chap" id="ch3">Topics &amp; Messages <span class="n">— Chapter 3</span></h2>
+  <p class="intro">Topics carry the great majority of robot data. If you understand publish–subscribe you understand most of ROS 2 — and, as it happens, most of modern robotics middleware generally.</p>
+
+  <h3>Publish and subscribe</h3>
+  <p>A <strong>topic</strong> is a named channel carrying one type of message. Nodes <strong>publish</strong> to it or <strong>subscribe</strong> to it. It's a broadcast: every subscriber receives every message, and the publisher is not blocked or slowed by them.</p>
+  <p>The mental model that helps most is a radio station. <code>/scan</code> is a frequency. The LIDAR broadcasts on it continuously whether or not anyone is tuned in. Anyone who wants the data tunes in. Nobody requests anything, and nobody waits.</p>
+
+  <h3>Message types</h3>
+  <p>Every topic has exactly one type, defined in a <code>.msg</code> file and shared by all parties. A type mismatch means no connection &mdash; and, unhelpfully, no error either. Types are namespaced by package:</p>
+  <pre><code>std_msgs/msg/String            # a string
+sensor_msgs/msg/Image          # a camera frame
+sensor_msgs/msg/LaserScan      # a 2D laser sweep
+sensor_msgs/msg/JointState     # joint names, positions, velocities, efforts
+geometry_msgs/msg/Twist        # linear + angular velocity — the classic drive command
+nav_msgs/msg/Odometry          # estimated pose and velocity</code></pre>
+  <p><a class="xref" href="#appB">Appendix B</a> lists the ones you'll actually meet. Inspect any of them with <code>ros2 interface show</code>.</p>
+
+  <h3>Headers, timestamps, and frames</h3>
+  <p>Most sensor messages begin with a <code>std_msgs/msg/Header</code> carrying a timestamp and a <code>frame_id</code>. Both matter enormously and both are easy to get wrong. The timestamp is what lets a node fuse a camera frame with a LIDAR sweep taken 12 ms apart rather than naively assuming they're simultaneous. The <code>frame_id</code> says <em>which coordinate frame the data is expressed in</em> &mdash; "3.2 metres away" is meaningless without knowing away from what (<a class="xref" href="#ch11">Chapter 11</a>).</p>
+
+  <div class="box cmd">
+    <span class="h">Try it — watch a graph from the outside</span>
+    <pre><code># Terminal 1 — a talker node that ships with ROS 2
+ros2 run demo_nodes_cpp talker
+
+# Terminal 2 — a listener
+ros2 run demo_nodes_py listener
+
+# Terminal 3 — inspect the live system without touching either
+ros2 node list
+ros2 topic list
+ros2 topic echo /chatter            # you are now a third subscriber
+ros2 topic info /chatter --verbose  # who publishes, who subscribes, what QoS
+ros2 topic hz /chatter              # actual publish rate
+ros2 topic pub /chatter std_msgs/msg/String "{data: 'injected'}" --once</code></pre>
+    That last command matters: you published into a running system from the shell, and the listener received it identically to the real talker's messages. Nothing in the graph could tell the difference &mdash; that's decoupling made concrete.
+  </div>
+
+  <div class="box field">
+    <span class="h">From the field — this pattern is everywhere</span>
+    Publish&ndash;subscribe is not a ROS idea, and recognizing it elsewhere is one of the more portable things you'll take from this book. The Unitree G1 uses it over raw DDS with no ROS involved (<a class="xref" href="Unitree_G1_Field_Guide.html#ch3">G1 guide</a>). Self-driving stacks, industrial control over MQTT, financial market data feeds, air-traffic systems, and essentially every event-driven web backend all use the same shape: named channels, decoupled producers and consumers, broadcast delivery. Learn to think in topics once &mdash; who publishes what, at what rate, and who cares &mdash; and you can walk up to an unfamiliar distributed system of almost any kind and start asking productive questions immediately. That transferability is a large part of why this chapter is worth reading twice.
+  </div>
+
+  <h2 class="chap" id="ch4">Services &amp; Actions <span class="n">— Chapter 4</span></h2>
+  <p class="intro">Topics are a firehose with no acknowledgement, which is wrong for two common situations: asking a question and waiting for the answer, and starting a long job you want to monitor. Services and actions cover those.</p>
+
+  <h3>Services — request and reply</h3>
+  <p>A <strong>service</strong> is a function call across the network: one client, one server, one request, one response. Use it for things that are quick and need an answer &mdash; "reset the odometry", "what's the battery level", "switch to position mode".</p>
+  <pre><code>ros2 service list
+ros2 service type /reset
+ros2 service call /reset std_srvs/srv/Empty
+ros2 interface show std_srvs/srv/SetBool</code></pre>
+  <p>The critical caveat: a service call <strong>blocks</strong> until the server responds. Calling a slow service from inside a control loop will stall that loop, and calling a service from within a callback can deadlock the node outright &mdash; a classic beginner trap that produces a node which simply freezes with no error.</p>
+
+  <h3>Actions — long jobs with feedback</h3>
+  <p>An <strong>action</strong> is for work that takes time and that you want to watch or abort: "walk to the kitchen", "pick up that cup". It combines three things &mdash; a <strong>goal</strong> you send, periodic <strong>feedback</strong> while it runs, and a final <strong>result</strong> &mdash; plus the ability to cancel.</p>
+  <pre><code>ros2 action list
+ros2 action info /navigate_to_pose -t
+ros2 action send_goal /fibonacci example_interfaces/action/Fibonacci "{order: 8}" --feedback</code></pre>
+
+  <h3>Choosing between the three</h3>
+  <table>
+    <tr><th>Use</th><th>When</th><th>Example</th></tr>
+    <tr><td><strong>Topic</strong></td><td>Continuous data; many listeners; nobody needs a reply</td><td>Camera frames, joint states, velocity commands</td></tr>
+    <tr><td><strong>Service</strong></td><td>Quick question, need the answer, happens occasionally</td><td>Get a parameter, reset a counter, toggle a mode</td></tr>
+    <tr><td><strong>Action</strong></td><td>Takes seconds or minutes; want progress; might cancel</td><td>Navigate somewhere, execute a trajectory, calibrate</td></tr>
+  </table>
+  <p>The rule of thumb that keeps people out of trouble: <strong>if in doubt, use a topic.</strong> Topics are non-blocking, easy to inspect from the command line, and easy to record and replay. Reach for a service only when you genuinely need a reply, and for an action only when the job is long enough that you'd want to watch it.</p>
+
+  <h2 class="part-divider" id="partII">Part II — Working with a Robot</h2>
+
+  <h2 class="chap" id="ch5">Installing ROS 2 <span class="n">— Chapter 5</span></h2>
+  <p class="intro">Straightforward if your Ubuntu version matches your chosen distribution, and painful if it doesn't. Check that first.</p>
+
+  <h3>Install Jazzy on Ubuntu 24.04</h3>
+  <pre><code># Locale — ROS 2 needs a UTF-8 locale
+sudo apt update &amp;&amp; sudo apt install locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+
+# Enable the universe repo and add the ROS 2 apt source
+sudo apt install software-properties-common curl -y
+sudo add-apt-repository universe
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+  -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+  http://packages.ros.org/ros2/ubuntu $(. /etc/os-release &amp;&amp; echo $UBUNTU_CODENAME) main" \
+  | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# Install — desktop includes rviz2 and the demo nodes
+sudo apt update &amp;&amp; sudo apt install ros-jazzy-desktop
+sudo apt install ros-dev-tools</code></pre>
+
+  <h3>Sourcing — the step everyone forgets</h3>
+  <p>ROS 2 is not on your PATH until you source its setup script, in every new terminal:</p>
+  <pre><code>source /opt/ros/jazzy/setup.bash
+ros2 --help                        # now it exists
+
+# Verify the install with the demo pair:
+ros2 run demo_nodes_cpp talker     # terminal 1
+ros2 run demo_nodes_py listener    # terminal 2</code></pre>
+  <p>You can add the source line to <code>~/.bashrc</code> to automate it. Convenient while learning; a nuisance later if you work with multiple distributions or want a clean shell, since it silently affects every terminal you open. A common middle ground is a short alias:</p>
+  <pre><code>echo "alias sj='source /opt/ros/jazzy/setup.bash'" >> ~/.bashrc</code></pre>
+
+  <div class="box warn">
+    <span class="h">Sourcing order matters with virtual environments</span>
+    ROS 2's Python packages are installed system-wide by apt, built against the exact Python that ships with your Ubuntu release. A normal isolated virtual environment cannot see them, and <code>import rclpy</code> will fail inside one. The fix is to source ROS <em>first</em>, then create the venv with <code>--system-site-packages</code>, then activate it &mdash; in that order. The <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Python_Environment_Field_Guide.html#ch10">Python Environment Field Guide's robotics chapter</a> covers exactly this, and it is worth reading before you fight it for an hour.
+  </div>
+
+  <h2 class="chap" id="ch6">The CLI Toolkit <span class="n">— Chapter 6</span></h2>
+  <p class="intro">This is the chapter that makes you effective. The <code>ros2</code> command lets you inspect, poke, and record a running robot without writing or modifying any code, and fluency here is most of what "being good at ROS 2" looks like day to day.</p>
+
+  <h3>The shape of the command</h3>
+  <p>Everything follows <code>ros2 &lt;noun&gt; &lt;verb&gt;</code>, which makes it guessable:</p>
+  <pre><code>ros2 node list / info
+ros2 topic list / echo / info / hz / pub / bw
+ros2 service list / call / type
+ros2 action list / send_goal
+ros2 param list / get / set
+ros2 interface show / list
+ros2 bag record / play / info
+ros2 run &lt;package&gt; &lt;executable&gt;
+ros2 launch &lt;package&gt; &lt;launch_file&gt;
+ros2 doctor</code></pre>
+
+  <h3>The ones you'll use constantly</h3>
+  <pre><code>ros2 topic list -t                       # topics WITH their types
+ros2 topic echo /joint_states            # dump live messages
+ros2 topic echo /scan --once             # exactly one, then stop
+ros2 topic hz /image_raw                 # is it publishing at the rate it claims?
+ros2 topic bw /image_raw                 # bandwidth — often surprisingly large
+ros2 topic info /cmd_vel --verbose       # publishers, subscribers, and QoS
+ros2 node info /perception               # everything one node is connected to
+ros2 interface show sensor_msgs/msg/JointState</code></pre>
+
+  <h3>The debugging sequence</h3>
+  <p>When something isn't working, this order finds the fault fast, and it's worth running through it before forming any theory:</p>
+  <ol>
+    <li><code>ros2 node list</code> &mdash; is the node even running?</li>
+    <li><code>ros2 topic list</code> &mdash; does the topic exist? Check the exact name; <code>/cmd_vel</code> and <code>/robot/cmd_vel</code> are different topics and nothing will warn you.</li>
+    <li><code>ros2 topic info &lt;topic&gt; --verbose</code> &mdash; is anyone actually publishing, and does the subscriber count include yours?</li>
+    <li><code>ros2 topic hz &lt;topic&gt;</code> &mdash; is data flowing, and at the rate you expect?</li>
+    <li><code>ros2 topic echo &lt;topic&gt;</code> &mdash; is the content sane, or is it all zeros?</li>
+  </ol>
+  <p>Ninety percent of the time you find it in the first three steps: a typo'd topic name, a node that died silently, or a QoS mismatch (<a class="xref" href="#ch10">Chapter 10</a>).</p>
+
+  <div class="box field">
+    <span class="h">From the field — echo before you theorize</span>
+    The most common failure mode in robotics debugging is not a hard problem &mdash; it's reasoning confidently about a system without having looked at it. Someone is sure the controller is wrong, and the controller is fine; the sensor has been publishing zeros for ten minutes because a cable is loose. <code>ros2 topic echo</code> costs three seconds and replaces the assumption with a fact. Build the habit of checking the data at each stage of a pipeline before forming a theory about which stage is broken, and you'll find that most "hard bugs" turn out to be somewhere you never would have looked, precisely because you were sure it wasn't there. This is the same instinct as checking <code>sys.executable</code> before debugging a Python import &mdash; look at reality first, cheaply, then think.
+  </div>
+
+  <h2 class="chap" id="ch7">Writing Nodes in Python <span class="n">— Chapter 7</span></h2>
+  <p class="intro">Enough Python to write a real node. The library is <code>rclpy</code>, and the structure is the same every time — which means once you've written one, you've essentially written all of them.</p>
+
+  <h3>A publisher</h3>
+  <pre><code>import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class Talker(Node):
+    def __init__(self):
+        super().__init__('talker')                       # the node's name
+        self.pub = self.create_publisher(String, 'chatter', 10)
+        self.timer = self.create_timer(0.5, self.tick)   # 2 Hz
+        self.count = 0
+
+    def tick(self):
+        msg = String()
+        msg.data = f'hello {self.count}'
+        self.pub.publish(msg)
+        self.get_logger().info(f'published: {msg.data}')
+        self.count += 1
+
+
+def main():
+    rclpy.init()
+    node = Talker()
+    try:
+        rclpy.spin(node)          # hand control to ROS; callbacks now fire
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()</code></pre>
+
+  <h3>A subscriber</h3>
+  <pre><code>import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
+
+
+class JointWatcher(Node):
+    def __init__(self):
+        super().__init__('joint_watcher')
+        self.sub = self.create_subscription(
+            JointState, 'joint_states', self.on_joints, 10)
+
+    def on_joints(self, msg):                 # called for every message
+        if not msg.position:
+            return
+        hottest = max(range(len(msg.position)), key=lambda i: abs(msg.position[i]))
+        self.get_logger().info(
+            f'{len(msg.position)} joints, largest angle at index {hottest}')</code></pre>
+
+  <h3>The four things to understand</h3>
+  <table>
+    <tr><th>Thing</th><th>What it means</th></tr>
+    <tr><td><code>rclpy.init()</code></td><td>Starts the client library. Once per process, before anything else.</td></tr>
+    <tr><td><code>rclpy.spin(node)</code></td><td>Hands control to ROS. Blocks forever, running callbacks as messages arrive.</td></tr>
+    <tr><td><strong>Callback</strong></td><td>Your function, called by ROS when a message arrives. You never call it yourself.</td></tr>
+    <tr><td><strong>Queue depth</strong> (the <code>10</code>)</td><td>How many messages buffer if you can't keep up. Small for live sensor data — you want the newest, not a backlog.</td></tr>
+  </table>
+
+  <div class="box warn">
+    <span class="h">Never block inside a callback</span>
+    By default a node runs callbacks one at a time on a single thread. A <code>time.sleep()</code>, a slow file write, a blocking service call, or a long computation inside a callback stops the <em>entire node</em> &mdash; every other subscription silently stops being serviced, messages pile up and get dropped, and there is no error message anywhere. The symptom is a node that "gets slow" or "misses messages" for no visible reason, and it is one of the most common real bugs in ROS 2 code. Keep callbacks short: copy the data out, set a flag, and do the real work in a timer or a separate thread. If you genuinely need concurrency, look at callback groups and the multi-threaded executor.
+  </div>
+
+  <h2 class="chap" id="ch8">Workspaces &amp; colcon <span class="n">— Chapter 8</span></h2>
+  <p class="intro">A workspace is a folder of packages you build together. colcon is the tool that builds it. Two rules and one gotcha cover almost everything.</p>
+
+  <h3>The layout</h3>
+  <pre><code>ros2_ws/
+  src/                    &lt;- your packages live here. Only this is yours.
+    my_robot_pkg/
+      package.xml         &lt;- metadata and dependencies
+      setup.py            &lt;- Python build config (or CMakeLists.txt for C++)
+      my_robot_pkg/
+        __init__.py
+        my_node.py
+  build/                  &lt;- generated. Safe to delete.
+  install/                &lt;- generated. Contains the setup script you source.
+  log/                    &lt;- generated. Safe to delete.</code></pre>
+
+  <h3>Creating and building</h3>
+  <pre><code>mkdir -p ~/ros2_ws/src &amp;&amp; cd ~/ros2_ws/src
+ros2 pkg create --build-type ament_python --node-name my_node my_robot_pkg
+
+cd ~/ros2_ws
+colcon build                              # build everything
+colcon build --packages-select my_robot_pkg   # just one — much faster
+colcon build --symlink-install            # Python edits apply without rebuilding
+
+source install/setup.bash                 # <- the step everyone forgets
+ros2 run my_robot_pkg my_node</code></pre>
+
+  <h3>Underlay and overlay</h3>
+  <p>This is the concept worth understanding rather than memorizing. Your ROS installation at <code>/opt/ros/jazzy</code> is the <strong>underlay</strong>. Your workspace is an <strong>overlay</strong> on top of it, and its packages take precedence. So the order is always: source the underlay, build, source the overlay.</p>
+  <pre><code>source /opt/ros/jazzy/setup.bash     # underlay first
+cd ~/ros2_ws &amp;&amp; colcon build
+source install/setup.bash            # overlay second — now yours wins</code></pre>
+  <p>Get the order backwards and you'll run the installed version of a package while editing a local copy and wondering why nothing you change has any effect.</p>
+
+  <div class="box warn">
+    <span class="h">Never run colcon build from inside src/</span>
+    <code>colcon build</code> must run from the workspace root &mdash; the folder <em>containing</em> <code>src</code>. Run it inside <code>src/</code> and colcon creates a nested <code>build/</code>, <code>install/</code>, and <code>log/</code> in there, producing a workspace-within-a-workspace whose symptoms are genuinely baffling: builds that succeed while your changes never take effect, packages found twice, stale code running. If it happens, delete the stray <code>build/ install/ log/</code> from inside <code>src/</code> and rebuild from the root. And when a build misbehaves in a way you can't explain, <code>rm -rf build install log</code> from the workspace root followed by a clean rebuild is a legitimate and common first move.
+  </div>
+
+  <h2 class="chap" id="ch9">Launch Files &amp; Parameters <span class="n">— Chapter 9</span></h2>
+  <p class="intro">Real robots run twenty nodes. Starting them by hand in twenty terminals is not a plan. Launch files start a whole system with one command; parameters let you configure it without editing code.</p>
+
+  <h3>A launch file</h3>
+  <p>Launch files are Python (or XML/YAML) and live in a <code>launch/</code> folder:</p>
+  <pre><code>from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(package='my_robot_pkg', executable='camera_node',
+             name='camera', parameters=[{'fps': 30, 'device': '/dev/video0'}]),
+        Node(package='my_robot_pkg', executable='perception_node',
+             name='perception',
+             remappings=[('image_in', '/camera/image_raw')]),
+        Node(package='my_robot_pkg', executable='controller_node',
+             name='controller', output='screen'),
+    ])</code></pre>
+  <pre><code>ros2 launch my_robot_pkg bringup.launch.py
+ros2 launch my_robot_pkg bringup.launch.py fps:=60      # override an argument</code></pre>
+
+  <h3>Remapping</h3>
+  <p>Remapping renames a node's topics from outside, without touching its source. It's what lets you reuse a package that publishes to <code>/image</code> in a system that expects <code>/camera/image_raw</code>, or run two identical cameras under different names. This is a genuinely important idea &mdash; it's the mechanism that makes third-party packages composable in practice rather than only in theory.</p>
+
+  <h3>Parameters</h3>
+  <p>Parameters are named, typed configuration values a node reads at startup and can expose for change at runtime:</p>
+  <pre><code>ros2 param list
+ros2 param get /camera fps
+ros2 param set /camera fps 60
+ros2 param dump /camera > camera_params.yaml</code></pre>
+  <pre><code># In the node:
+self.declare_parameter('fps', 30)
+fps = self.get_parameter('fps').get_parameter_value().integer_value</code></pre>
+  <p>The habit worth forming: anything you might want to change &mdash; a rate, a threshold, a device path, an IP address &mdash; should be a parameter, not a literal in your source. It costs two lines and it means tuning doesn't require a rebuild, a code review, or a Git commit.</p>
+
+  <h2 class="part-divider" id="partIII">Part III — The Layer Underneath</h2>
+
+  <h2 class="chap" id="ch10">DDS, QoS &amp; Discovery <span class="n">— Chapter 10</span></h2>
+  <p class="intro">You can use ROS 2 for a long time without thinking about DDS, right up until the day two nodes refuse to talk and everything looks correct. This chapter is that day's insurance.</p>
+
+  <h3>What DDS is</h3>
+  <p><strong>DDS</strong> (Data Distribution Service) is an industry standard for real-time publish&ndash;subscribe messaging, used in aerospace, defence, and industrial control long before ROS adopted it. ROS 2 doesn't implement its own networking &mdash; it sits on top of a DDS implementation, and <code>rclpy</code>'s topics <em>are</em> DDS topics with a ROS naming convention layered on.</p>
+  <p>The practical consequence is worth stating plainly, because it explains something that otherwise looks strange: <strong>a program can speak DDS directly, without ROS 2, and interoperate at the wire level.</strong> That is exactly what the Unitree G1's SDK does &mdash; it publishes and subscribes to DDS topics like <code>rt/lowstate</code> using CycloneDDS, with no ROS installed anywhere (<a class="xref" href="Unitree_G1_Field_Guide.html#ch3">G1 guide</a>). It's also why a ROS 2 bridge for the G1 is possible at all: both sides were already speaking the same protocol.</p>
+
+  <h3>Quality of Service</h3>
+  <p>QoS is a set of per-topic policies controlling delivery guarantees, and it is the single most common cause of "the topic exists, both nodes are running, and nothing arrives". <strong>A publisher and subscriber whose QoS profiles are incompatible simply do not connect &mdash; silently.</strong></p>
+  <table>
+    <tr><th>Policy</th><th>Options</th><th>What it means</th></tr>
+    <tr><td><strong>Reliability</strong></td><td><code>RELIABLE</code> / <code>BEST_EFFORT</code></td><td>Retry until delivered, or send once and accept loss</td></tr>
+    <tr><td><strong>Durability</strong></td><td><code>VOLATILE</code> / <code>TRANSIENT_LOCAL</code></td><td>Whether late subscribers get previously-sent messages</td></tr>
+    <tr><td><strong>History</strong></td><td><code>KEEP_LAST(n)</code> / <code>KEEP_ALL</code></td><td>How much to buffer</td></tr>
+    <tr><td><strong>Deadline / Liveliness</strong></td><td>durations</td><td>Expected message interval; how a node proves it's alive</td></tr>
+  </table>
+  <p>The incompatibility that catches everyone: <strong>a <code>RELIABLE</code> subscriber will not connect to a <code>BEST_EFFORT</code> publisher.</strong> The subscriber is demanding a guarantee the publisher hasn't offered. The reverse is fine. Sensor drivers commonly publish <code>BEST_EFFORT</code> (for a camera at 30 Hz, the newest frame matters more than a retransmitted old one), while the default for a hand-written subscriber is <code>RELIABLE</code> &mdash; so a first attempt to subscribe to a camera very often produces exactly nothing.</p>
+  <pre><code>ros2 topic info /image_raw --verbose      # shows the QoS on both sides</code></pre>
+  <p>Read both profiles from that output and compare. It's the diagnostic for this entire class of bug.</p>
+
+  <h3>Discovery and ROS_DOMAIN_ID</h3>
+  <p>Nodes find each other by multicast on the local network. Two consequences follow, both of which surprise people in a shared lab:</p>
+  <ul>
+    <li><strong>Everyone on the subnet shares a graph.</strong> Your classmate's <code>/cmd_vel</code> is your <code>/cmd_vel</code>. Set <code>ROS_DOMAIN_ID</code> to a number between 0 and 101 to partition yourself off &mdash; nodes only see nodes with the same ID.</li>
+    <li><strong>Discovery needs multicast.</strong> Many managed networks, VPNs, and Docker's default bridge block it. Nodes on the same machine work; nodes across machines never find each other.</li>
+  </ul>
+  <pre><code>export ROS_DOMAIN_ID=42                  # pick a number; set it in every terminal
+export ROS_LOCALHOST_ONLY=1              # stay on this machine entirely
+ros2 doctor                              # general environment check
+ros2 daemon stop &amp;&amp; ros2 daemon start    # fixes stale CLI listings</code></pre>
+
+  <div class="box field">
+    <span class="h">From the field — the silent failure is the signature</span>
+    ROS 2's hardest bugs share one characteristic: <strong>nothing errors</strong>. A QoS mismatch doesn't warn you. A <code>ROS_DOMAIN_ID</code> difference doesn't warn you. A topic name typo creates a brand-new topic quite happily. Blocked multicast produces two systems that each look perfectly healthy in isolation. Every one of these presents identically &mdash; as "the data isn't arriving" &mdash; with no diagnostic pointing anywhere. So build the checklist reflex, in order: is the node alive, does the topic name match <em>exactly</em>, does <code>--verbose</code> show a publisher and a subscriber that actually found each other, do the QoS profiles match, is <code>ROS_DOMAIN_ID</code> the same in both terminals. Five checks, under a minute, and they cover the overwhelming majority of "it should be working" situations. Working through them mechanically is far faster than reasoning, because there's nothing to reason from &mdash; the system is telling you nothing on purpose.
+  </div>
+
+  <h2 class="chap" id="ch11">TF2 — Coordinate Frames <span class="n">— Chapter 11</span></h2>
+  <p class="intro">A robot is a collection of things in different places, each measuring the world from its own point of view. TF2 keeps track of where everything is relative to everything else, over time — and it is the piece most people underestimate.</p>
+
+  <h3>The problem</h3>
+  <p>The camera reports a face 2 metres ahead. The arm needs to reach for it. But "2 metres ahead" is <em>from the camera</em>, which sits on a head that has turned 30&deg;, on a torso that has leaned forward, on a base somewhere in a room. Converting between all those viewpoints &mdash; continuously, as everything moves &mdash; is a genuinely fiddly problem, and it's the one TF2 exists to solve.</p>
+
+  <h3>The frame tree</h3>
+  <p>Every coordinate frame gets a name and a parent, forming a tree: <code>map</code> &rarr; <code>odom</code> &rarr; <code>base_link</code> &rarr; <code>torso</code> &rarr; <code>head</code> &rarr; <code>camera_link</code>. TF2 continuously collects each parent&ndash;child transform and can compute the relationship between <em>any</em> two frames by walking the tree &mdash; including at a past timestamp, which is what lets you correctly relate a camera frame to where the arm was when that frame was captured.</p>
+  <pre><code>ros2 run tf2_tools view_frames                     # writes a PDF of the whole tree
+ros2 run tf2_ros tf2_echo base_link camera_link    # live transform between two frames
+ros2 topic echo /tf</code></pre>
+  <p><code>view_frames</code> is the first thing to run on an unfamiliar robot &mdash; the resulting diagram tells you more about how the system is put together than most documentation will.</p>
+
+  <h3>What goes wrong</h3>
+  <ul>
+    <li><strong>A disconnected tree</strong> &mdash; two separate trees with no link between them, so no transform can be computed. Usually a missing publisher.</li>
+    <li><strong>"Lookup would require extrapolation into the future"</strong> &mdash; you asked for a transform at a timestamp TF2 doesn't have yet. Usually clock skew between machines, or asking too eagerly.</li>
+    <li><strong>Two publishers for one transform</strong> &mdash; they fight, and the frame jitters between two positions.</li>
+    <li><strong>Wrong <code>frame_id</code> on a message</strong> &mdash; the data is correct, expressed in a frame it isn't actually in, and everything downstream is quietly wrong in a way that looks like a calibration error.</li>
+  </ul>
+
+  <h2 class="chap" id="ch12">Visualizing &amp; Recording <span class="n">— Chapter 12</span></h2>
+  <p class="intro">Two tools that change how you work: rviz2 shows you what the robot believes, and ros2 bag lets you record reality and replay it as many times as you need.</p>
+
+  <h3>rviz2</h3>
+  <p>rviz2 renders the robot's world model &mdash; the LIDAR points, the camera image, the frame tree, the planned path, the robot's own body from its URDF. Run <code>rviz2</code>, then add displays for the topics you care about.</p>
+  <p>The essential distinction, and it's one that takes people a while: <strong>rviz2 is not a simulator.</strong> It doesn't run physics and it isn't the world. It draws what the robot is <em>publishing</em> &mdash; that is, what the robot <em>believes</em>. When the rviz view and reality disagree, that gap is the bug, and it's frequently the fastest way to spot a bad calibration or a wrong frame. (For actual physics simulation you want Gazebo, Isaac Sim, or Lucky Engine &mdash; see the <a class="xref" href="Lucky_Robots_Field_Guide.html#ch1">Lucky Robots guide</a>.)</p>
+
+  <h3>ros2 bag</h3>
+  <p>Recording is the most underused tool in robotics:</p>
+  <pre><code>ros2 bag record -a                         # everything (careful — cameras are huge)
+ros2 bag record /scan /joint_states /tf     # selected topics
+ros2 bag record -o my_run /scan             # named output folder
+
+ros2 bag info my_run
+ros2 bag play my_run
+ros2 bag play my_run --rate 0.5             # half speed
+ros2 bag play my_run --loop</code></pre>
+  <p>Because nodes are decoupled (<a class="xref" href="#ch2">Chapter 2</a>), a replayed bag is indistinguishable from a live robot to anything downstream. Record once, then develop and test your perception or control code against that exact data as many times as you like &mdash; no robot, no lab, no battery, and perfectly repeatable.</p>
+
+  <div class="box field">
+    <span class="h">From the field — record everything, always</span>
+    Hardware time is the scarcest resource in any robotics course or lab. The robot is shared, it needs charging, something is always broken, and the interesting failure happens once at 4pm on the day before the demo. Teams who record bags of every session can debug on a laptop at midnight against the exact data from that failure. Teams who don't have to reproduce it on hardware &mdash; which often means it never gets fixed, because the conditions that triggered it are gone. Start <code>ros2 bag record</code> before every hardware session as a matter of routine, keep the bags, and name them meaningfully. Disk is cheap; the third-to-last session with the robot before a deadline is not. This is the same instinct as capturing a working <code>requirements.txt</code> the moment an environment works: the expensive thing is the state you were in, and it is trivially cheap to save it and ruinous to lose it.
+  </div>
+
+  <h2 class="part-divider" id="partIV">Part IV — Practice &amp; Reference</h2>
+
+  <h2 class="chap" id="ch13">Troubleshooting <span class="n">— Chapter 13</span></h2>
+  <p class="intro">The failures you'll actually hit. Nearly all of them are silent, which is why a mechanical checklist beats intuition here.</p>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td><code>ros2: command not found</code></td><td>Didn't source the setup script</td><td><code>source /opt/ros/jazzy/setup.bash</code></td></tr>
+    <tr><td>Topic exists, no data arrives</td><td>QoS mismatch — the classic</td><td><code>ros2 topic info --verbose</code>, compare both sides (<a class="xref" href="#ch10">Ch 10</a>)</td></tr>
+    <tr><td>Nodes on two machines can't see each other</td><td>Different <code>ROS_DOMAIN_ID</code>, or multicast blocked</td><td>Match the ID; check the firewall and VPN</td></tr>
+    <tr><td>Node runs but publishes nothing</td><td>Topic name typo — a new topic was created</td><td><code>ros2 topic list</code> and compare character by character</td></tr>
+    <tr><td>Built the package, changes don't apply</td><td>Didn't source <code>install/setup.bash</code></td><td>Source it; or build with <code>--symlink-install</code></td></tr>
+    <tr><td>Build succeeds, node not found</td><td>Ran <code>colcon build</code> from inside <code>src/</code></td><td>Delete the nested build dirs, build from the root (<a class="xref" href="#ch8">Ch 8</a>)</td></tr>
+    <tr><td><code>import rclpy</code> fails in a venv</td><td>Plain venv can't see system ROS packages</td><td>Recreate with <code>--system-site-packages</code> (<a class="xref" href="#ch5">Ch 5</a>)</td></tr>
+    <tr><td>Node freezes, no error</td><td>Something blocking inside a callback</td><td>Move slow work out of the callback (<a class="xref" href="#ch7">Ch 7</a>)</td></tr>
+    <tr><td>TF: "extrapolation into the future"</td><td>Clock skew, or asking too early</td><td>Sync clocks with NTP; use <code>Time()</code> for latest</td></tr>
+    <tr><td><code>ros2 topic list</code> shows stale topics</td><td>CLI daemon cache</td><td><code>ros2 daemon stop &amp;&amp; ros2 daemon start</code></td></tr>
+    <tr><td>Everything is bizarre after an upgrade</td><td>Stale build artifacts</td><td><code>rm -rf build install log</code> and rebuild</td></tr>
+    <tr><td>Two robots interfering in a shared lab</td><td>Same domain on one subnet</td><td>Give each person a distinct <code>ROS_DOMAIN_ID</code></td></tr>
+  </table>
+
+  <h2 class="chap" id="ch14">Lab Exercises <span class="n">— Chapter 14</span></h2>
+  <p class="intro">All of these run on a laptop with no robot. Do them in order — each builds on the last.</p>
+
+  <h3>Lab 1 — Inspect a running graph</h3>
+  <ol>
+    <li>Start <code>demo_nodes_cpp talker</code> and <code>demo_nodes_py listener</code> in two terminals.</li>
+    <li>In a third, map the whole system: <code>ros2 node list</code>, <code>ros2 topic list -t</code>, <code>ros2 node info /talker</code>.</li>
+    <li>Run <code>ros2 topic echo /chatter</code>. Check <code>ros2 topic info /chatter --verbose</code> &mdash; how many subscribers now, and why?</li>
+    <li>Kill the talker. What does <code>ros2 topic list</code> show, and what does <code>hz</code> report?</li>
+  </ol>
+
+  <h3>Lab 2 — Inject and measure</h3>
+  <ol>
+    <li>With only the listener running, publish to <code>/chatter</code> from the command line. Confirm the listener receives it.</li>
+    <li>Publish at 10 Hz with <code>--rate 10</code> and verify with <code>ros2 topic hz</code>.</li>
+    <li>Explain why the listener can't tell your messages from the talker's.</li>
+  </ol>
+
+  <h3>Lab 3 — Write both halves</h3>
+  <ol>
+    <li>Create a workspace and a Python package. Write a publisher that emits a counter at 5 Hz.</li>
+    <li>Write a subscriber that logs only even numbers.</li>
+    <li>Build with <code>--symlink-install</code>, source the overlay, and run both.</li>
+    <li>Change the rate to 20 Hz and re-run <em>without</em> rebuilding. Why does that work?</li>
+  </ol>
+
+  <h3>Lab 4 — Break QoS on purpose</h3>
+  <ol>
+    <li>Write a publisher with <code>BEST_EFFORT</code> reliability and a subscriber with the default <code>RELIABLE</code>.</li>
+    <li>Run both. Confirm no data arrives and that <em>nothing</em> reports an error.</li>
+    <li>Diagnose it using only <code>ros2 topic info --verbose</code>.</li>
+    <li>Fix it, then explain why the opposite pairing works fine.</li>
+  </ol>
+
+  <h3>Lab 5 — Record and replay</h3>
+  <ol>
+    <li>Record your Lab 3 topic for 30 seconds into a named bag.</li>
+    <li>Stop the publisher entirely. Run <code>ros2 bag info</code> and inspect what you captured.</li>
+    <li>Play the bag back and confirm your subscriber behaves identically.</li>
+    <li>Play at <code>--rate 0.25</code>. What does this let you do that live hardware doesn't?</li>
+  </ol>
+
+  <h3>Lab 6 — Launch it all</h3>
+  <ol>
+    <li>Write a launch file starting both your nodes, with the rate as a parameter.</li>
+    <li>Launch with a non-default rate from the command line.</li>
+    <li>Add a remapping so the subscriber listens on a differently-named topic, without editing either node.</li>
+  </ol>
+
+  <h2 class="chap" id="ch15">Glossary <span class="n">— Chapter 15</span></h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><strong>Node</strong></td><td>One process doing one job, with a name in the graph.</td></tr>
+    <tr><td><strong>Graph</strong></td><td>All running nodes plus the connections between them.</td></tr>
+    <tr><td><strong>Topic</strong></td><td>A named broadcast channel carrying one message type.</td></tr>
+    <tr><td><strong>Publisher / Subscriber</strong></td><td>A node sending to / receiving from a topic.</td></tr>
+    <tr><td><strong>Message</strong></td><td>A typed data structure defined in a <code>.msg</code> file.</td></tr>
+    <tr><td><strong>Service</strong></td><td>Blocking request/response between one client and one server.</td></tr>
+    <tr><td><strong>Action</strong></td><td>Long-running goal with feedback and cancellation.</td></tr>
+    <tr><td><strong>Parameter</strong></td><td>Named configuration value a node reads at startup.</td></tr>
+    <tr><td><strong>rclpy</strong></td><td>The ROS 2 Python client library.</td></tr>
+    <tr><td><strong>spin</strong></td><td>Handing control to ROS so it can run your callbacks.</td></tr>
+    <tr><td><strong>Callback</strong></td><td>Your function, invoked by ROS when a message arrives.</td></tr>
+    <tr><td><strong>DDS</strong></td><td>The industry-standard pub/sub middleware ROS 2 runs on.</td></tr>
+    <tr><td><strong>QoS</strong></td><td>Per-topic delivery policies. Mismatches fail silently.</td></tr>
+    <tr><td><strong>ROS_DOMAIN_ID</strong></td><td>Partitions the network so separate graphs don't mix.</td></tr>
+    <tr><td><strong>Workspace</strong></td><td>A folder of packages built together with colcon.</td></tr>
+    <tr><td><strong>colcon</strong></td><td>The build tool. Run it from the workspace root.</td></tr>
+    <tr><td><strong>Underlay / Overlay</strong></td><td>The base ROS install / your workspace layered on top.</td></tr>
+    <tr><td><strong>Launch file</strong></td><td>A script that starts many nodes with configuration.</td></tr>
+    <tr><td><strong>Remapping</strong></td><td>Renaming a node's topics from outside, without code changes.</td></tr>
+    <tr><td><strong>TF2</strong></td><td>The library tracking coordinate frames and transforms over time.</td></tr>
+    <tr><td><strong>frame_id</strong></td><td>Which coordinate frame a message's data is expressed in.</td></tr>
+    <tr><td><strong>rviz2</strong></td><td>Visualizer. Shows what the robot believes, not ground truth.</td></tr>
+    <tr><td><strong>ros2 bag</strong></td><td>Records topics to disk and replays them indistinguishably.</td></tr>
+    <tr><td><strong>URDF</strong></td><td>XML description of a robot's links, joints, and geometry.</td></tr>
+  </table>
+
+  <h2 class="chap" id="appA">Command Cheat-Sheet <span class="n">— Appendix A</span></h2>
+
+  <h3>Setup</h3>
+  <pre><code>source /opt/ros/jazzy/setup.bash        # every new terminal
+source install/setup.bash               # after building a workspace
+export ROS_DOMAIN_ID=42                 # partition your graph
+export ROS_LOCALHOST_ONLY=1             # stay on this machine
+ros2 doctor                             # environment check
+printenv | grep -i ros                  # what's actually set</code></pre>
+
+  <h3>Inspect</h3>
+  <pre><code>ros2 node list
+ros2 node info /node_name
+ros2 topic list -t                      # with types
+ros2 topic echo /topic
+ros2 topic echo /topic --once
+ros2 topic info /topic --verbose        # QoS on both sides — the key diagnostic
+ros2 topic hz /topic
+ros2 topic bw /topic
+ros2 interface show sensor_msgs/msg/JointState
+ros2 interface list</code></pre>
+
+  <h3>Interact</h3>
+  <pre><code>ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.2}, angular: {z: 0.0}}" --once
+ros2 topic pub /chatter std_msgs/msg/String "{data: 'hi'}" --rate 10
+
+ros2 service list
+ros2 service call /reset std_srvs/srv/Empty
+ros2 action send_goal /fib example_interfaces/action/Fibonacci "{order: 8}" --feedback
+
+ros2 param list
+ros2 param get /node param_name
+ros2 param set /node param_name 42
+ros2 param dump /node > params.yaml</code></pre>
+
+  <h3>Build &amp; run</h3>
+  <pre><code>ros2 pkg create --build-type ament_python --node-name my_node my_pkg
+colcon build                            # from the workspace ROOT
+colcon build --packages-select my_pkg
+colcon build --symlink-install
+rm -rf build install log                # clean rebuild
+
+ros2 run my_pkg my_node
+ros2 launch my_pkg bringup.launch.py
+ros2 launch my_pkg bringup.launch.py rate:=20</code></pre>
+
+  <h3>Record, replay, visualize</h3>
+  <pre><code>ros2 bag record -a
+ros2 bag record -o my_run /scan /joint_states /tf
+ros2 bag info my_run
+ros2 bag play my_run --rate 0.5 --loop
+
+rviz2
+ros2 run tf2_tools view_frames
+ros2 run tf2_ros tf2_echo base_link camera_link
+ros2 run rqt_graph rqt_graph              # visual graph of nodes and topics</code></pre>
+
+  <h3>Unstick</h3>
+  <pre><code>ros2 daemon stop &amp;&amp; ros2 daemon start     # stale CLI listings
+ros2 topic info /topic --verbose           # QoS mismatch
+echo $ROS_DOMAIN_ID                        # same in both terminals?
+ros2 doctor --report</code></pre>
+
+  <h2 class="chap" id="appB">Common Message Types <span class="n">— Appendix B</span></h2>
+  <p class="intro">The types you'll meet most. Inspect any of them with <code>ros2 interface show &lt;type&gt;</code>.</p>
+
+  <h3>Sensors</h3>
+  <table>
+    <tr><th>Type</th><th>Carries</th></tr>
+    <tr><td><code>sensor_msgs/msg/Image</code></td><td>A camera frame — raw pixels, encoding, dimensions</td></tr>
+    <tr><td><code>sensor_msgs/msg/CompressedImage</code></td><td>JPEG/PNG frame. Far cheaper over a network</td></tr>
+    <tr><td><code>sensor_msgs/msg/CameraInfo</code></td><td>Intrinsics and distortion — needed for any 3D reasoning</td></tr>
+    <tr><td><code>sensor_msgs/msg/LaserScan</code></td><td>A 2D laser sweep: ranges plus angle limits</td></tr>
+    <tr><td><code>sensor_msgs/msg/PointCloud2</code></td><td>3D points from a depth camera or 3D LIDAR</td></tr>
+    <tr><td><code>sensor_msgs/msg/Imu</code></td><td>Orientation, angular velocity, linear acceleration</td></tr>
+    <tr><td><code>sensor_msgs/msg/JointState</code></td><td>Joint names, positions, velocities, efforts</td></tr>
+    <tr><td><code>sensor_msgs/msg/BatteryState</code></td><td>Voltage, current, charge percentage</td></tr>
+  </table>
+
+  <h3>Geometry &amp; motion</h3>
+  <table>
+    <tr><th>Type</th><th>Carries</th></tr>
+    <tr><td><code>geometry_msgs/msg/Twist</code></td><td>Linear + angular velocity. The standard drive command</td></tr>
+    <tr><td><code>geometry_msgs/msg/Pose</code></td><td>Position + orientation (quaternion)</td></tr>
+    <tr><td><code>geometry_msgs/msg/PoseStamped</code></td><td>A Pose with a timestamp and frame_id</td></tr>
+    <tr><td><code>geometry_msgs/msg/Transform</code></td><td>Translation + rotation between two frames</td></tr>
+    <tr><td><code>geometry_msgs/msg/Wrench</code></td><td>Force + torque</td></tr>
+    <tr><td><code>nav_msgs/msg/Odometry</code></td><td>Estimated pose and velocity, with covariance</td></tr>
+    <tr><td><code>nav_msgs/msg/Path</code></td><td>A sequence of stamped poses</td></tr>
+    <tr><td><code>nav_msgs/msg/OccupancyGrid</code></td><td>A 2D map as a grid of occupancy probabilities</td></tr>
+    <tr><td><code>trajectory_msgs/msg/JointTrajectory</code></td><td>Timed sequence of joint positions</td></tr>
+  </table>
+
+  <h3>Basics and infrastructure</h3>
+  <table>
+    <tr><th>Type</th><th>Carries</th></tr>
+    <tr><td><code>std_msgs/msg/String</code>, <code>Bool</code>, <code>Float64</code>, <code>Int32</code></td><td>Single values. Fine for demos; avoid in real systems — no timestamp, no frame</td></tr>
+    <tr><td><code>std_msgs/msg/Header</code></td><td>Timestamp + frame_id. Embedded in most sensor messages</td></tr>
+    <tr><td><code>tf2_msgs/msg/TFMessage</code></td><td>What flows on <code>/tf</code> and <code>/tf_static</code></td></tr>
+    <tr><td><code>diagnostic_msgs/msg/DiagnosticArray</code></td><td>Standardized health reporting</td></tr>
+    <tr><td><code>std_srvs/srv/Empty</code>, <code>SetBool</code>, <code>Trigger</code></td><td>The generic services you'll see most often</td></tr>
+  </table>
+
+  <div class="box tip">
+    <span class="h">Prefer the standard type</span>
+    It's tempting to define a custom message for everything, and occasionally you genuinely need one. But every time you use a standard type instead, you get the whole ecosystem for free &mdash; rviz2 can display it, existing packages can consume it, <code>ros2 bag</code> handles it, and the next person to read your code already knows what it means. Publishing your robot's joints as <code>sensor_msgs/msg/JointState</code> rather than a bespoke array means every off-the-shelf tool works with your robot immediately. Check <code>ros2 interface list</code> before writing a <code>.msg</code> file; the type you want usually already exists.
+  </div>
+
+  <hr>
+  <div class="box field">
+    <span class="h">A closing word</span>
+    ROS 2's difficulty is almost entirely front-loaded. The concepts are genuinely small &mdash; processes that broadcast on named channels, and tools to watch them &mdash; but there's a lot of surface area around them, and the failure modes are quiet in a way that punishes guessing. What gets you past it isn't memorizing commands; it's holding the graph in your head and reaching for <code>ros2 topic echo</code> before you reach for a theory. Everything in Part III exists for the day the model isn't enough, and that day comes for everyone. When it does, work the checklist rather than reasoning about it &mdash; the system isn't going to tell you anything, so you have to go and look. Then go build something that moves.
+  </div>
+
+  <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
+
+</div>
+</div>
+
+<div id="palette" role="dialog" aria-modal="true">
+  <div id="palbox">
+    <input id="palinput" type="text" placeholder="Search the whole book&hellip;" autocomplete="off" spellcheck="false">
+    <div id="palresults"></div>
+    <div id="palhint"><span><b>&uarr;&darr;</b> navigate</span><span><b>&crarr;</b> open</span><span><b>esc</b> close</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement, body=document.body;
+  var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+  var themeBtn=document.getElementById('themebtn');
+  function applyTheme(t){root.setAttribute('data-theme',t);themeBtn.innerHTML=(t==='light')?'&#9728;':'&#9789;';LS.set('ros2-theme',t);}
+  applyTheme(LS.get('ros2-theme','dark'));
+  themeBtn.addEventListener('click',function(){applyTheme(root.getAttribute('data-theme')==='light'?'dark':'light');});
+
+  var fs=parseInt(LS.get('ros2-fs','16'),10);
+  function applyFs(){fs=Math.max(13,Math.min(21,fs));root.style.setProperty('--fs',fs+'px');LS.set('ros2-fs',fs);}
+  applyFs();
+  document.getElementById('fsup').addEventListener('click',function(){fs+=1;applyFs();});
+  document.getElementById('fsdown').addEventListener('click',function(){fs-=1;applyFs();});
+
+  var collapsed={};try{collapsed=JSON.parse(LS.get('ros2-collapsed','{}'))||{};}catch(e){collapsed={};}
+  [].forEach.call(document.querySelectorAll('.navpart'),function(part){
+    var btn=part.querySelector('button.part');var key=btn.textContent.trim();
+    if(collapsed[key])part.classList.add('collapsed');
+    btn.addEventListener('click',function(){part.classList.toggle('collapsed');collapsed[key]=part.classList.contains('collapsed');LS.set('ros2-collapsed',JSON.stringify(collapsed));});
+  });
+
+  var used={};document.querySelectorAll('[id]').forEach(function(el){used[el.id]=true;});
+  function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50);}
+  document.querySelectorAll('.content h3, .content h4').forEach(function(h){if(h.id)return;var base=slug(h.textContent)||'s',id=base,n=2;while(used[id]){id=base+'-'+(n++);}used[id]=true;h.id=id;});
+  document.querySelectorAll('.content h2.chap, .content h3').forEach(function(h){if(!h.id)return;var a=document.createElement('a');a.className='anchor';a.href='#'+h.id;a.textContent='#';a.title='Link to this section';h.appendChild(a);});
+
+  var content=document.querySelector('.content');
+  var heads=[].slice.call(content.querySelectorAll('h2.chap'));
+  function chapTitle(h){var c=h.cloneNode(true);var n=c.querySelector('.n');if(n)n.remove();var a=c.querySelector('.anchor');if(a)a.remove();return c.textContent.trim();}
+  heads.forEach(function(h){var words=0,el=h.nextElementSibling;while(el&&!(el.matches&&el.matches('h2.chap'))){words+=(el.textContent||'').split(/\s+/).length;el=el.nextElementSibling;}
+    if(words>40){var mins=Math.max(1,Math.round(words/200));var rt=document.createElement('div');rt.className='readtime';rt.innerHTML='&#128338; ~'+mins+' min read &middot; '+words.toLocaleString()+' words';if(h.nextSibling)h.parentNode.insertBefore(rt,h.nextSibling);else h.parentNode.appendChild(rt);}});
+
+  function pagerCell(h,dir){if(!h)return '<span class="empty"></span>';return '<a class="'+dir+'" href="#'+h.id+'"><div class="dir">'+(dir==='prev'?'← Previous':'Next →')+'</div><div class="ttl">'+chapTitle(h)+'</div></a>';}
+  heads.forEach(function(h,i){var pager=document.createElement('div');pager.className='pager';pager.innerHTML=pagerCell(heads[i-1],'prev')+pagerCell(heads[i+1],'next');
+    var next=heads[i+1];if(next){var target=next;if(target.previousElementSibling&&target.previousElementSibling.matches&&target.previousElementSibling.matches('h2.part-divider'))target=target.previousElementSibling;content.insertBefore(pager,target);}else{var bt=document.getElementById('backtop');var hr=content.querySelector('hr');content.insertBefore(pager,hr||bt);}});
+
+  document.querySelectorAll('.content pre').forEach(function(pre){var wrap=document.createElement('div');wrap.className='codewrap';pre.parentNode.insertBefore(wrap,pre);wrap.appendChild(pre);var btn=document.createElement('button');btn.className='copybtn';btn.textContent='Copy';wrap.appendChild(btn);
+    btn.addEventListener('click',function(){var txt=pre.innerText;var done=function(){btn.textContent='Copied!';btn.classList.add('done');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('done');},1400);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){fallback(txt);done();});}else{fallback(txt);done();}});});
+  function fallback(txt){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+
+  var navlinks=[].slice.call(document.querySelectorAll('a.navlink'));
+  var readSet={};try{readSet=JSON.parse(LS.get('ros2-read','{}'))||{};}catch(e){readSet={};}
+  var readFill=document.getElementById('readfill'),readLabel=document.getElementById('readlabel');
+  function refreshProgress(){var total=navlinks.length,done=0;navlinks.forEach(function(a){if(readSet[a.getAttribute('href')]){a.classList.add('read');done++;}else a.classList.remove('read');});readFill.style.width=(total?Math.round(done/total*100):0)+'%';readLabel.textContent=done+' of '+total+' read';}
+  navlinks.forEach(function(a){var chk=a.querySelector('.check');if(chk)chk.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('ros2-read',JSON.stringify(readSet));refreshProgress();});});
+  refreshProgress();
+
+  var navByHref={};navlinks.forEach(function(a){navByHref[a.getAttribute('href')]=a;});
+  var spyTargets=navlinks.map(function(a){var el=document.querySelector(a.getAttribute('href'));return el?{a:a,el:el,id:a.getAttribute('href')}:null;}).filter(Boolean);
+  var crumb=document.getElementById('crumb'),prog=document.getElementById('progress'),backtop=document.getElementById('backtop');var curId=null;
+  function onScroll(){var sc=window.pageYOffset,h=document.documentElement.scrollHeight-window.innerHeight;prog.style.width=(h>0?(sc/h*100):0)+'%';backtop.classList.toggle('show',sc>500);
+    var cur=spyTargets[0];for(var i=0;i<spyTargets.length;i++){if(spyTargets[i].el.getBoundingClientRect().top<=120)cur=spyTargets[i];}
+    if(cur&&cur.id!==curId){curId=cur.id;navlinks.forEach(function(a){a.classList.remove('active');});cur.a.classList.add('active');crumb.innerHTML='<b>'+cur.a.textContent.trim()+'</b>';}}
+  document.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll);window.addEventListener('load',onScroll);onScroll();
+
+  var navsearch=document.getElementById('navsearch');
+  navsearch.addEventListener('input',function(){var q=navsearch.value.trim().toLowerCase();navlinks.forEach(function(a){var hit=a.textContent.toLowerCase().indexOf(q)>=0;a.classList.toggle('hidden',q.length>0&&!hit);});if(q.length>0)document.querySelectorAll('.navpart').forEach(function(p){p.classList.remove('collapsed');});});
+
+  var index=[];
+  document.querySelectorAll('.content h2.chap').forEach(function(h){index.push({id:h.id,text:chapTitle(h),lvl:'Chapter',chap:chapTitle(h)});});
+  (function(){var curChap='';document.querySelectorAll('.content h2.chap, .content h3, .content h4').forEach(function(h){if(h.matches('h2.chap')){curChap=chapTitle(h);return;}var t=h.cloneNode(true);var a=t.querySelector('.anchor');if(a)a.remove();index.push({id:h.id,text:t.textContent.trim(),lvl:(h.tagName==='H3'?'Section':'Topic'),chap:curChap});});})();
+  var palette=document.getElementById('palette'),palinput=document.getElementById('palinput'),palresults=document.getElementById('palresults');var palSel=0,palShown=[];
+  function renderPal(q){q=q.trim().toLowerCase();palShown=!q?index.slice(0,40):index.filter(function(it){return it.text.toLowerCase().indexOf(q)>=0||it.chap.toLowerCase().indexOf(q)>=0;}).slice(0,60);palSel=0;
+    palresults.innerHTML=palShown.length?palShown.map(function(it,i){var ctx=(it.lvl!=='Chapter'&&it.chap)?'<span class="ctx">'+it.chap+'</span>':'';return '<div class="palitem'+(i===0?' sel':'')+'" data-id="'+it.id+'"><span class="lvl">'+it.lvl+'</span><span class="txt">'+it.text+'</span>'+ctx+'</div>';}).join(''):'<div class="palitem"><span class="txt" style="color:var(--faint)">No matches</span></div>';}
+  function openPal(){palette.classList.add('open');palinput.value='';renderPal('');palinput.focus();}
+  function closePal(){palette.classList.remove('open');}
+  function goPal(){var it=palShown[palSel];if(it){closePal();location.hash='#'+it.id;}}
+  document.getElementById('palbtn').addEventListener('click',openPal);
+  palinput.addEventListener('input',function(){renderPal(palinput.value);});
+  palresults.addEventListener('click',function(e){var d=e.target.closest('.palitem');if(d&&d.dataset.id){closePal();location.hash='#'+d.dataset.id;}});
+  palette.addEventListener('click',function(e){if(e.target===palette)closePal();});
+  palinput.addEventListener('keydown',function(e){var items=palresults.querySelectorAll('.palitem');
+    if(e.key==='ArrowDown'){e.preventDefault();palSel=Math.min(palShown.length-1,palSel+1);}else if(e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(0,palSel-1);}else if(e.key==='Enter'){e.preventDefault();goPal();return;}else if(e.key==='Escape'){closePal();return;}else return;
+    items.forEach(function(d,i){d.classList.toggle('sel',i===palSel);});if(items[palSel])items[palSel].scrollIntoView({block:'nearest'});});
+
+  var scrim=document.getElementById('scrim');
+  function closeNav(){body.classList.remove('navopen');}
+  document.getElementById('hamburger').addEventListener('click',function(){body.classList.toggle('navopen');});
+  scrim.addEventListener('click',closeNav);
+  navlinks.forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=980)closeNav();});});
+
+  document.addEventListener('keydown',function(e){var tag=(e.target.tagName||'').toLowerCase(),typing=(tag==='input'||tag==='textarea');
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal();return;}
+    if(typing)return;
+    if(e.key==='/'){e.preventDefault();openPal();return;}
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var idx=spyTargets.findIndex(function(s){return s.id==='#'+curId;});if(idx<0)idx=0;var go=e.key==='ArrowRight'?spyTargets[idx+1]:spyTargets[idx-1];if(go){e.preventDefault();location.hash=go.id;}}
+    else if(e.key.toLowerCase()==='t'){window.scrollTo({top:0,behavior:'smooth'});}
+    else if(e.key.toLowerCase()==='r'){var a=navByHref['#'+curId];if(a){var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('ros2-read',JSON.stringify(readSet));refreshProgress();}}
+    else if(e.key.toLowerCase()==='b'){body.classList.toggle('navopen');}});
+})();
+</script>
+
+</body>
+</html>

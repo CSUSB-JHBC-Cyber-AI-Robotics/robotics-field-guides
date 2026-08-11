@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A practical guide to Lucky Engine and the luckyrobots Python SDK — installing the engine, connecting over gRPC, driving robots and policies, building Gymnasium training environments, recording datasets, and understanding the sim-to-real gap.">
+<title>The Lucky Robots Field Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --panel3:#222b3a;
+    --ink:#c9d1d9; --dim:#8b949e; --faint:#6e7681;
+    --cyan:#39d0d8; --orange:#ff9e44; --green:#56d364; --red:#f47272;
+    --amber:#e3b341; --purple:#bc8cff; --blue:#6cb6ff; --pink:#f778ba;
+    --line:#30363d; --code:#0b1622; --sel:#1f6feb44;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+    --fs:16px; --navw:316px; --topbarh:50px;
+    --accent:var(--orange);
+  }
+  html[data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef1f5; --panel3:#e4e9f0;
+    --ink:#1f2328; --dim:#57606a; --faint:#818b98;
+    --cyan:#0b8c97; --orange:#bc5d18; --green:#1a7f37; --red:#cf222e;
+    --amber:#9a6700; --purple:#8250df; --blue:#0969da; --pink:#bf3989;
+    --line:#d0d7de; --code:#f3f5f8; --sel:#0969da22;
+    --shadow:0 8px 30px rgba(140,149,159,.25);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  ::selection{background:var(--sel)}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.65;font-size:var(--fs);transition:background .25s ease,color .25s ease}
+  a{color:var(--accent)}
+  /* ---- commit-graph theme backdrop ---- */
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%23ff9e44' stroke-width='1.5' opacity='0.5'%3E%3Cpath d='M34 0 V120'/%3E%3Cpath d='M34 30 C34 44 78 42 78 56 C78 70 34 68 34 82'/%3E%3C/g%3E%3Cg fill='%23ff9e44' opacity='0.65'%3E%3Ccircle cx='34' cy='16' r='3'/%3E%3Ccircle cx='34' cy='100' r='3'/%3E%3Ccircle cx='78' cy='56' r='3'/%3E%3C/g%3E%3C/svg%3E");background-size:120px 120px;background-repeat:repeat}
+  html[data-theme="light"] #fx{opacity:.07}
+  /* ---- engine ---- */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--orange),var(--red));z-index:60;transition:width .1s linear}
+  #topbar{position:fixed;top:0;left:var(--navw);right:0;height:var(--topbarh);z-index:45;display:flex;align-items:center;gap:10px;padding:0 20px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  #topbar .crumb{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  #topbar .crumb b{color:var(--ink)}
+  #topbar button,#topbar .kbtn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);height:32px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;transition:all .15s ease}
+  #topbar button:hover,#topbar .kbtn:hover{border-color:var(--accent);color:var(--accent)}
+  #topbar .icobtn{width:32px;padding:0;justify-content:center;font-size:15px}
+  #hamburger{display:none}
+  .kbtn .k{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  #nav{position:fixed;top:0;left:0;width:var(--navw);height:100vh;overflow-y:auto;background:color-mix(in srgb,var(--panel) 92%,transparent);border-right:1px solid var(--line);padding:16px 12px 80px;z-index:50;backdrop-filter:blur(6px);scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .25s ease}
+  #nav::-webkit-scrollbar{width:9px}#nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+  #nav .brand{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+  #nav .brand .logo{width:28px;height:28px;flex:none}
+  #nav h1{font-size:14px;color:var(--accent);margin:0;letter-spacing:.3px}
+  #nav .sub{font-size:11px;color:var(--dim);margin:2px 0 10px 37px}
+  #navsearch{width:100%;background:var(--code);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px 8px 30px;font-size:12.5px;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+  #navsearch:focus{outline:none;border-color:var(--accent)}
+  #readbar{margin:10px 2px 6px;font-size:11px;color:var(--dim)}
+  #readbar .track{height:5px;background:var(--panel3);border-radius:3px;margin-top:4px;overflow:hidden}
+  #readbar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .3s ease}
+  .navpart{margin-top:8px}
+  button.part{width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--purple);font-weight:700;padding:8px 6px 4px;display:flex;align-items:center;justify-content:space-between;font-family:inherit}
+  button.part:hover{color:var(--accent)}
+  button.part .caret{transition:transform .2s ease;font-size:9px;color:var(--faint)}
+  .navpart.collapsed button.part .caret{transform:rotate(-90deg)}
+  .navlinks{overflow:hidden;transition:max-height .25s ease;max-height:2400px}
+  .navpart.collapsed .navlinks{max-height:0}
+  a.navlink{display:flex;align-items:center;gap:7px;color:var(--dim);text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px;border-left:2px solid transparent;line-height:1.4;transition:all .12s ease}
+  a.navlink:hover{color:var(--ink);background:var(--panel2)}
+  a.navlink.active{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+  a.navlink.hidden{display:none}
+  a.navlink .check{width:14px;height:14px;flex:none;border:1.5px solid var(--line);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all .15s ease}
+  a.navlink.read .check{background:var(--green);border-color:var(--green);color:#04210c}
+  a.navlink.read{color:var(--faint)}
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:46;opacity:0;pointer-events:none;transition:opacity .25s}
+  body.navopen #scrim{opacity:1;pointer-events:auto}
+  #wrap{position:relative;z-index:1;margin-left:var(--navw);padding:calc(var(--topbarh) + 4px) 40px 0}
+  .content{max-width:880px;margin:0 auto;padding:30px 0 140px}
+  h2.chap{font-size:29px;color:var(--accent);border-bottom:2px solid var(--accent);padding-bottom:8px;margin:64px 0 4px;scroll-margin-top:64px;position:relative}
+  h2.chap .n{color:var(--faint);font-size:17px;font-weight:400}
+  .readtime{font-size:12px;color:var(--faint);margin:0 0 14px;display:flex;align-items:center;gap:6px}
+  h2.part-divider{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:var(--purple);margin:80px 0 0;padding:0;border:none;scroll-margin-top:64px;font-weight:700}
+  h3{font-size:20px;color:var(--orange);margin:34px 0 8px;scroll-margin-top:64px}
+  h4{font-size:15px;color:var(--purple);margin:22px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  .anchor{opacity:0;margin-left:8px;font-size:.7em;text-decoration:none;color:var(--faint);transition:opacity .15s}
+  h2.chap:hover .anchor,h3:hover .anchor{opacity:1}
+  p{margin:10px 0}ul,ol{margin:10px 0;padding-left:24px}li{margin:5px 0}
+  strong{color:var(--ink);font-weight:600}html[data-theme="dark"] strong{color:#e6edf3}em{color:var(--ink)}
+  code{background:var(--code);color:var(--accent);padding:1px 6px;border-radius:4px;font-family:'Consolas','Courier New',monospace;font-size:13.5px}
+  .codewrap{position:relative;margin:14px 0}
+  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0}
+  pre code{background:none;color:#d6e3f0;padding:0;font-size:13.5px;line-height:1.55}
+  pre .c{color:var(--faint)}pre .k{color:var(--orange)}pre .o{color:var(--green)}pre .a{color:var(--amber)}
+  .copybtn{position:absolute;top:8px;right:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;font-size:11px;padding:3px 9px;cursor:pointer;opacity:0;transition:all .15s;font-family:inherit}
+  .codewrap:hover .copybtn{opacity:1}.copybtn:hover{border-color:var(--accent);color:var(--accent)}.copybtn.done{color:var(--green);border-color:var(--green)}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent)}
+  tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+  table.lookup th{position:sticky;top:var(--topbarh);z-index:2}
+  .box{border-radius:10px;padding:12px 16px;margin:16px 0;border-left:4px solid;position:relative;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+  .box .h{font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:12px;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .box .h::before{font-size:14px;font-family:'Segoe UI Emoji',sans-serif}
+  .field{border-color:var(--cyan)}.field .h{color:var(--cyan)}.field .h::before{content:"\1F500"}
+  .tip{border-color:var(--green)}.tip .h{color:var(--green)}.tip .h::before{content:"\1F4A1"}
+  .warn{border-color:var(--amber)}.warn .h{color:var(--amber)}.warn .h::before{content:"\26A0\FE0F"}
+  .danger{border-color:var(--red)}.danger .h{color:var(--red)}.danger .h::before{content:"\1F6D1"}
+  .lab{border-color:var(--purple)}.lab .h{color:var(--purple)}.lab .h::before{content:"\1F9EA"}
+  .case{border-color:var(--blue)}.case .h{color:var(--blue)}.case .h::before{content:"\1F4DC"}
+  .cmd{border-color:var(--orange)}.cmd .h{color:var(--orange)}.cmd .h::before{content:"\2328\FE0F"}
+  .intro{font-size:15px;color:var(--dim);font-style:italic;border-left:3px solid var(--line);padding-left:14px;margin:8px 0 20px}
+  .cover{padding:30px 0 22px;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .cover h1{font-size:44px;color:var(--accent);margin:0 0 6px;letter-spacing:.5px;background:linear-gradient(90deg,var(--orange),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .cover .tag{font-size:18px;color:var(--orange);margin-bottom:18px}
+  .cover .by{font-size:14px;color:var(--dim)}
+  .cover .ed{font-size:12px;color:var(--faint);margin-top:14px;letter-spacing:.5px}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:monospace}
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0}
+  a.xref{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)}a.xref:hover{border-bottom-style:solid}
+  figure{margin:22px 0;text-align:center}
+  figure svg{max-width:100%;height:auto;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px}
+  figcaption{font-size:12.5px;color:var(--dim);margin-top:8px;font-style:italic}
+  svg text{font-family:'Segoe UI',system-ui,sans-serif}
+  svg .box-f{fill:var(--panel2);stroke:var(--orange);stroke-width:1.5}
+  svg .box-w{fill:var(--panel2);stroke:var(--amber);stroke-width:1.5}
+  svg .box-d{fill:var(--panel2);stroke:var(--red);stroke-width:1.5}
+  svg .box-b{fill:var(--panel2);stroke:var(--blue);stroke-width:1.5}
+  svg .box-g{fill:var(--panel2);stroke:var(--green);stroke-width:1.5}
+  svg .box-v{fill:var(--panel2);stroke:var(--purple);stroke-width:1.5}
+  svg .lbl{fill:var(--ink);font-size:13px}svg .lbl-s{fill:var(--dim);font-size:11px}svg .lbl-t{fill:var(--orange);font-size:13px;font-weight:700}
+  svg .arr{stroke:var(--dim);stroke-width:1.5;fill:none}svg .arrm{stroke:var(--ink);stroke-width:1.5;fill:none}
+  .pager{display:flex;gap:14px;margin:50px 0 0;border-top:1px solid var(--line);padding-top:22px}
+  .pager a{flex:1;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:12px 16px;color:var(--ink);transition:all .15s ease;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+  .pager a:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .pager .dir{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .pager .ttl{font-size:14px;color:var(--accent);margin-top:3px}.pager .next{text-align:right}.pager .empty{visibility:hidden}
+  #palette{position:fixed;inset:0;z-index:70;display:none;align-items:flex-start;justify-content:center;background:rgba(1,4,9,.6);backdrop-filter:blur(3px);padding-top:12vh}
+  #palette.open{display:flex}
+  #palbox{width:min(620px,92vw);max-height:70vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  #palinput{border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:16px;padding:16px 18px;font-family:inherit;outline:none}
+  #palresults{overflow-y:auto;padding:6px}
+  .palitem{display:flex;align-items:baseline;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer}
+  .palitem .lvl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);min-width:46px}
+  .palitem .txt{font-size:14px;color:var(--ink)}.palitem .ctx{font-size:11px;color:var(--faint);margin-left:auto}
+  .palitem.sel,.palitem:hover{background:var(--panel2)}.palitem.sel .txt{color:var(--accent)}
+  #palhint{padding:8px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);display:flex;gap:14px}#palhint b{color:var(--dim);font-weight:600}
+  .backtop{position:fixed;bottom:22px;right:24px;background:var(--panel2);border:1px solid var(--line);color:var(--accent);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:17px;opacity:0;pointer-events:none;transition:opacity .25s,transform .15s;z-index:40;box-shadow:var(--shadow)}
+  .backtop.show{opacity:.9;pointer-events:auto}.backtop:hover{opacity:1;transform:translateY(-3px)}
+  @media(max-width:980px){:root{--navw:0px}#nav{transform:translateX(-105%);width:300px;box-shadow:var(--shadow)}body.navopen #nav{transform:translateX(0)}#topbar{left:0}#hamburger{display:inline-flex}#wrap{padding-left:18px;padding-right:18px}}
+  @media print{#nav,#topbar,#progress,.backtop,.copybtn,.pager,.anchor,#fx{display:none!important}#wrap{margin:0;padding:0}}
+</style>
+
+<style>
+  :root{--accent:var(--purple)}
+  #progress,#readbar .fill{background:linear-gradient(90deg,var(--purple),var(--pink))}
+  .cover h1{background:linear-gradient(90deg,var(--purple),var(--pink))}
+  .cover .tag{color:var(--purple)}
+  h3{color:var(--purple)}
+  h4,h2.part-divider,button.part{color:var(--pink)}
+  pre .k{color:var(--purple)}
+  .cmd{border-color:var(--purple)}.cmd .h{color:var(--purple)}
+  .lab{border-color:var(--pink)}.lab .h{color:var(--pink)}
+  svg .box-f{stroke:var(--purple)}svg .lbl-t{fill:var(--purple)}
+  svg .box-v{stroke:var(--pink)}
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.3;
+    background-image:
+      linear-gradient(rgba(188,140,255,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(247,120,186,.04) 1px,transparent 1px);
+    background-size:52px 52px,52px 52px;
+    animation:luckydrift 40s linear infinite}
+  @keyframes luckydrift{from{background-position:0 0,0 0}to{background-position:52px 52px,52px 52px}}
+  html[data-theme="light"] #fx{opacity:.22}
+  @media(prefers-reduced-motion:reduce){#fx{animation:none}}
+</style>
+
+<style>
+  /* links to Field Guides that live outside this site — kept readable, not clickable */
+  .xref-offsite{color:var(--dim);border-bottom:1px dotted var(--faint);cursor:help}
+</style>
+</head>
+<body>
+<div id="fx" aria-hidden="true"></div>
+<div id="progress"></div>
+
+<nav id="nav">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M16 3 L27 9.5 v13 L16 29 L5 22.5 v-13 z" fill="none" stroke="var(--purple)" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M16 3 v13 M16 16 L27 9.5 M16 16 L5 9.5" fill="none" stroke="var(--pink)" stroke-width="1.4" opacity=".8"/>
+      <circle cx="16" cy="16" r="2.2" fill="var(--purple)"/>
+    </svg>
+    <h1>LUCKY ROBOTS FIELD GUIDE</h1>
+  </div>
+  <div class="sub">Lucky Engine &amp; Simulation-First Robotics</div>
+  <input id="navsearch" type="text" placeholder="Filter chapters&hellip;" autocomplete="off" spellcheck="false">
+  <div id="readbar"><span id="readlabel">0 of 0 read</span><div class="track"><div class="fill" id="readfill"></div></div></div>
+
+  <div class="navpart">
+    <button class="part">Front Matter <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#how-to-read"><span class="check">&#10003;</span>How to Read This Book</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part I &mdash; Getting Running <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch1"><span class="check">&#10003;</span>1 &middot; What Lucky Engine Is</a>
+      <a class="navlink" href="#ch2"><span class="check">&#10003;</span>2 &middot; Installing &amp; Connecting</a>
+      <a class="navlink" href="#ch3"><span class="check">&#10003;</span>3 &middot; The Editor &amp; Scenes</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part II &mdash; Driving the Simulation <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch4"><span class="check">&#10003;</span>4 &middot; Sessions &amp; the Step Loop</a>
+      <a class="navlink" href="#ch5"><span class="check">&#10003;</span>5 &middot; Robots, Policies &amp; Actuators</a>
+      <a class="navlink" href="#ch6"><span class="check">&#10003;</span>6 &middot; Cameras &amp; Observations</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part III &mdash; Doing Real Work <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch7"><span class="check">&#10003;</span>7 &middot; Training with LuckyEnv</a>
+      <a class="navlink" href="#ch8"><span class="check">&#10003;</span>8 &middot; Recording Datasets</a>
+      <a class="navlink" href="#ch9"><span class="check">&#10003;</span>9 &middot; System Identification</a>
+      <a class="navlink" href="#ch10"><span class="check">&#10003;</span>10 &middot; The Sim-to-Real Gap</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part IV &mdash; Practice &amp; Reference <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch11"><span class="check">&#10003;</span>11 &middot; Troubleshooting</a>
+      <a class="navlink" href="#ch12"><span class="check">&#10003;</span>12 &middot; Lab Exercises</a>
+      <a class="navlink" href="#ch13"><span class="check">&#10003;</span>13 &middot; Glossary</a>
+      <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; API Cheat-Sheet</a>
+      <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Choosing a Simulator</a>
+    </div>
+  </div>
+</nav>
+
+<div id="scrim"></div>
+
+<header id="topbar">
+  <button id="hamburger" class="icobtn" title="Menu" aria-label="Toggle navigation">&#9776;</button>
+  <div class="crumb" id="crumb">The Lucky Robots Field Guide</div>
+  <button class="kbtn" id="palbtn" title="Search everything (Ctrl-K)"><span>&#128269; Search</span> <span class="k">Ctrl K</span></button>
+  <button class="icobtn" id="fsdown" title="Smaller text">A&#8722;</button>
+  <button class="icobtn" id="fsup" title="Larger text">A+</button>
+  <button class="icobtn" id="themebtn" title="Toggle light/dark">&#9789;</button>
+</header>
+
+<div id="wrap">
+<div class="content">
+
+  <div class="cover">
+    <h1>The Lucky Robots Field Guide</h1>
+    <div class="tag">Lucky Engine &amp; Simulation-First Robotics</div>
+    <div class="by">Robot hardware is scarce, slow, and breakable. Every hour on a real humanoid costs you setup, charge, and the risk that a sign error snaps a gearbox &mdash; and you get one run per attempt. Simulation inverts all of that: thousands of runs, perfectly repeatable, nothing to break. Lucky Engine is a simulator built specifically for that job, pairing MuJoCo physics with a game engine’s editor and rendering, driven from Python. This book covers getting it running, controlling robots inside it, generating training data at scale, and &mdash; the part that matters most &mdash; being honest about what simulation does and doesn’t prove.</div>
+    <div class="ed">A companion in the Field Guide series &middot; pairs with the Unitree G1 &amp; ROS 2 guides &middot; offline, self-contained</div>
+  </div>
+
+<div class="box tip">
+    <span class="h">This book is interactive</span>
+    Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to search every heading; tick the sidebar <strong>checkboxes</strong> to track progress (or press <kbd>R</kbd>); use <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> to move chapter to chapter; toggle light/dark and text size top-right; hover any command block to <strong>copy</strong> it. Look for <span style="color:var(--purple)">&#x2328;&#xFE0F; Try it</span> boxes &mdash; every one of them runs on a laptop with no robot involved, which is rather the point. Everything works offline.
+  </div>
+
+  <div class="box warn">
+    <span class="h">A moving target</span>
+    Lucky Engine and the <code>luckyrobots</code> SDK are actively developed, and the API surface described here reflects the current generation at the time of writing. Class names, method signatures, and available robots change between releases. <strong>Treat the code in this book as the shape of the thing, not as a specification.</strong> Check <code>help()</code> on the objects, read the version's own README, and trust the installed package over any book &mdash; including this one &mdash; when they disagree. The concepts (a stepped physics loop, policy slots, Gymnasium environments, sim-to-real) are stable; the exact spellings are not.
+  </div>
+
+  <h2 class="chap" id="how-to-read">How to Read This Book <span class="n">— Front Matter</span></h2>
+  <p class="intro">This is a short book about a tool, wrapped around a longer argument about method. The tool is Lucky Engine; the method is doing your robotics work in simulation first, and knowing exactly how far that gets you.</p>
+
+  <div class="box field">
+    <span class="h">The journey, part by part</span>
+    <strong>Part I (Getting Running)</strong> is what Lucky Engine is, how to install and connect to it, and how scenes are put together. <strong>Part II (Driving the Simulation)</strong> is the core programming model: sessions, the step loop, controlling robots through policies or raw actuators, and getting observations back out. <strong>Part III (Doing Real Work)</strong> is where it earns its keep &mdash; reinforcement-learning environments, recording datasets for imitation learning, system identification, and an honest chapter on the sim-to-real gap. <strong>Part IV</strong> is troubleshooting, labs, and reference.
+  </div>
+
+  <div class="box tip">
+    <span class="h">How to actually use it</span>
+    Read <a class="xref" href="#ch10">Chapter 10</a> early, even out of order. Simulation's failure mode isn't that it doesn't work &mdash; it's that it works beautifully and convinces you that something is finished when it isn't. Knowing what you're not being told is the difference between simulation as a tool and simulation as a trap. If you're using this alongside a real G1, the <a class="xref" href="Unitree_G1_Field_Guide.html#ch10">G1 guide's simulation chapter</a> covers where the two workflows meet.
+  </div>
+
+  <h2 class="part-divider" id="partI">Part I — Getting Running</h2>
+
+  <h2 class="chap" id="ch1">What Lucky Engine Is <span class="n">— Chapter 1</span></h2>
+  <p class="intro">A game engine built for robotics rather than games — which turns out to be a genuinely useful combination, and explains most of its design.</p>
+
+  <h3>The pieces</h3>
+  <p>Lucky Engine pairs two things that are usually separate:</p>
+  <ul>
+    <li><strong>MuJoCo physics</strong> &mdash; the contact and dynamics engine that has become the research standard for legged and manipulation work. Accurate contact is the hard part of simulating a robot, and this is what MuJoCo is good at.</li>
+    <li><strong>A game engine's presentation layer</strong> &mdash; Vulkan rendering for realistic camera feeds, a drag-and-drop scene editor, and C# scripting for in-engine behaviour.</li>
+  </ul>
+  <p>You drive it from outside over <strong>gRPC</strong>, using the <code>luckyrobots</code> Python SDK. The engine runs as its own process; your Python program connects to it, steps physics, sends commands, and reads observations back. That separation matters: your training code and the simulator are decoupled, so you can restart one without the other.</p>
+
+  <h3>Why the rendering matters</h3>
+  <p>For a controller that only reads joint angles, rendering is irrelevant. But an increasing share of robot learning is <strong>vision-based</strong> &mdash; the policy takes camera images as input. If your simulated camera produces images that look nothing like the real one, a policy trained on them will fail on hardware for reasons that have nothing to do with your control logic. Realistic rendering is not cosmetic here; it's part of the physics of the problem you're solving.</p>
+
+  <h3>What it's for</h3>
+  <table>
+    <tr><th>Use</th><th>Why simulation wins</th></tr>
+    <tr><td><strong>Generating training data</strong></td><td>Millions of labelled episodes. Physically impossible to collect otherwise</td></tr>
+    <tr><td><strong>Testing control code safely</strong></td><td>A sign error is a funny video, not a broken gearbox</td></tr>
+    <tr><td><strong>Iterating without hardware</strong></td><td>The robot is shared, charging, or broken. Your laptop isn't</td></tr>
+    <tr><td><strong>Reproducible experiments</strong></td><td>Identical initial conditions every run — hardware can never do this</td></tr>
+    <tr><td><strong>Deterministic recording</strong></td><td>High-rate labelled capture for offline analysis</td></tr>
+  </table>
+  <p>Supported robots span quadrupeds, humanoids including the Unitree G1, manipulators, and anything else describable as a MuJoCo XML model &mdash; which in practice means most research robots.</p>
+
+  <h2 class="chap" id="ch2">Installing &amp; Connecting <span class="n">— Chapter 2</span></h2>
+  <p class="intro">Two halves: the engine, which is a downloaded application, and the Python client, which is a pip package. They find each other over a local network port.</p>
+
+  <h3>Install</h3>
+  <pre><code># 1. Download Lucky Engine for your platform (Linux, Windows, macOS)
+#    from luckyrobots.com — free for research and personal use.
+
+# 2. Install the Python client, in a virtual environment
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install luckyrobots
+
+# 3. Tell the client where the engine lives
+export LUCKYENGINE_PATH=/path/to/LuckyEngine        # Linux / macOS
+# set LUCKYENGINE_PATH=C:\path\to\LuckyEngine.exe   # Windows</code></pre>
+  <p>Put that <code>export</code> in your shell profile. Forgetting it in a new terminal is the most common first-run failure, and the error it produces is not always obvious about the cause.</p>
+
+  <div class="box warn">
+    <span class="h">Use a virtual environment</span>
+    <code>luckyrobots</code> pulls in gRPC, numpy, and Gymnasium, all of which are version-sensitive and all of which other robotics tooling also depends on &mdash; often at different versions. Installing it into your system Python is a reliable way to break something else later, and modern Python will refuse anyway. One venv per project, as always: the <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Python_Environment_Field_Guide.html#ch5">Python Environment Field Guide</a> covers the mechanics, and this is exactly the situation it exists for.
+  </div>
+
+  <h3>Connecting</h3>
+  <p>The engine exposes a gRPC server, by default on <code>127.0.0.1:50051</code>. The simplest connection test:</p>
+  <pre><code>from luckyrobots import Session
+
+with Session() as sess:
+    sess.connect(timeout_s=30.0)
+    info = sess.get_model_info()
+    print(f"nq={info.nq}  nu={info.nu}  joints={len(info.joints)}")</code></pre>
+  <p>Two numbers worth understanding from the start, because they come straight from MuJoCo and appear everywhere:</p>
+  <table>
+    <tr><th>Symbol</th><th>Meaning</th></tr>
+    <tr><td><code>nq</code></td><td>Size of the position state vector — the model's generalized coordinates</td></tr>
+    <tr><td><code>nu</code></td><td>Number of actuators — how many things you can actually command</td></tr>
+  </table>
+  <p><code>nq</code> and <code>nu</code> are usually <em>not</em> equal, and expecting them to be is a common early confusion. A free-floating humanoid base contributes seven values to <code>nq</code> (position plus quaternion) that no actuator drives directly &mdash; you can't command the robot's world position, only its joints.</p>
+
+  <div class="box cmd">
+    <span class="h">Try it — prove the connection</span>
+    <pre><code># 1. Launch Lucky Engine.
+# 2. In your venv:
+python -c "
+from luckyrobots import Session
+with Session() as s:
+    s.connect(timeout_s=30.0)
+    info = s.get_model_info()
+    print('nq', info.nq, 'nu', info.nu)
+    for j in info.joints[:10]:
+        print(' ', j)
+"</code></pre>
+    Do this before anything else. If the joint names print, your install, path variable, and gRPC connection are all correct. If it times out, the engine isn't running or isn't listening where the client expects &mdash; fix that before writing any control code (<a class="xref" href="#ch11">Chapter 11</a>).
+  </div>
+
+  <h2 class="chap" id="ch3">The Editor &amp; Scenes <span class="n">— Chapter 3</span></h2>
+  <p class="intro">A scene is a world plus the robots in it. The editor is how you build one without writing XML by hand — which is more valuable than it sounds, because most of the fiddly work in simulation is scene setup.</p>
+
+  <h3>What a scene contains</h3>
+  <ul>
+    <li><strong>The robot</strong> &mdash; its MuJoCo model: links, joints, actuators, collision geometry, mass properties.</li>
+    <li><strong>The environment</strong> &mdash; ground, obstacles, objects to manipulate, walls.</li>
+    <li><strong>Lighting and materials</strong> &mdash; which determine what simulated cameras see, and therefore matter for vision policies.</li>
+    <li><strong>Cameras</strong> &mdash; positioned to match the robot's real sensors as closely as you can manage.</li>
+    <li><strong>Physics settings</strong> &mdash; timestep, solver parameters, friction and contact properties.</li>
+  </ul>
+
+  <h3>MuJoCo XML underneath</h3>
+  <p>Whatever the editor shows you, the model is MuJoCo XML (MJCF) underneath. This is worth knowing for two reasons. First, it means the enormous existing library of MuJoCo robot models applies &mdash; including community G1 models. Second, when you need precision the editor doesn't offer, you edit the XML directly, and everything you learn about MJCF transfers to plain MuJoCo, Isaac, and most of the research literature.</p>
+
+  <h3>Timestep and determinism</h3>
+  <p>Physics advances in fixed discrete steps. The <strong>timestep</strong> trades accuracy against speed: smaller steps model fast contact more accurately and run slower. If a simulation behaves oddly &mdash; objects passing through each other, a robot jittering or exploding &mdash; an over-large timestep is among the first things to suspect.</p>
+  <p>The related property is <strong>determinism</strong>: same model, same initial state, same actions, same result, every time. This is the thing hardware can never give you, and it's what makes simulation scientifically useful &mdash; you can change exactly one variable and attribute the difference to it. Preserve it deliberately: seed your random number generators, and be suspicious of anything that introduces nondeterminism, because you're giving up simulation's main advantage.</p>
+
+  <h2 class="part-divider" id="partII">Part II — Driving the Simulation</h2>
+
+  <h2 class="chap" id="ch4">Sessions &amp; the Step Loop <span class="n">— Chapter 4</span></h2>
+  <p class="intro">Everything in Lucky Engine runs through a session and a loop: send actions, advance physics, read observations, repeat. Every other API in this book is a convenience layered on that.</p>
+
+  <h3>The Session</h3>
+  <pre><code>from luckyrobots import Session
+
+with Session() as sess:
+    sess.connect(timeout_s=30.0)
+    info = sess.get_model_info()
+
+    for _ in range(1000):
+        obs = sess.step(actions)          # advance one physics tick</code></pre>
+  <p>Use the context-manager form. A session holds a gRPC connection and engine-side resources, and <code>with</code> guarantees they're released even when your code raises &mdash; the same argument as <code>try/finally</code> around robot motion in the <a class="xref" href="Unitree_G1_Field_Guide.html#ch4">G1 guide</a>. A leaked session leaves the engine in a state you'll have to restart to clear.</p>
+
+  <h3>The loop is the whole model</h3>
+  <p><strong>Simulation time only advances when you step it.</strong> This is the mental shift from hardware and it has consequences worth stating plainly:</p>
+  <ul>
+    <li>Your code is never "too slow" &mdash; the world waits for you. A debugger breakpoint pauses physics, which is enormously useful and impossible on a real robot.</li>
+    <li>Nothing happens between steps. No interpolation, no drift.</li>
+    <li>Faster-than-real-time is normal. Without rendering, physics runs far quicker than the wall clock, which is what makes large-scale training feasible.</li>
+    <li>The step count <em>is</em> the clock. Simulated seconds are <code>steps &times; timestep</code>, unrelated to how long your program actually ran.</li>
+  </ul>
+
+  <h3>Async</h3>
+  <p>The SDK provides <code>AsyncSession</code> and async controller mirrors for asyncio-native code. Useful when the simulator is one of several things you're awaiting &mdash; a model API, a web dashboard, several environments at once. If you're writing a straightforward training loop, the synchronous form is simpler and there's no reason to reach for async.</p>
+
+  <h2 class="chap" id="ch5">Robots, Policies &amp; Actuators <span class="n">— Chapter 5</span></h2>
+  <p class="intro">Two levels of control, and the distinction closely mirrors the high-level/low-level split on real hardware — which is not a coincidence.</p>
+
+  <h3>Policies — the high-level route</h3>
+  <p>The engine ships in-engine <strong>policies</strong>: controllers that already know how to do something, like walking. You hand them commands rather than joint targets:</p>
+  <pre><code>from luckyrobots import Session
+
+with Session() as sess:
+    sess.connect(timeout_s=30.0)
+    robot = sess.robot("G1")
+
+    with robot.policy_slot("Walker"):
+        robot.commands("Walker")["SetVx"] = 0.5      # forward velocity
+        for state in robot.stream_state(target_fps=30):
+            print(state.motion_graph_active)</code></pre>
+  <p>A <strong>policy slot</strong> is an active controller occupying a control channel; the context manager acquires and releases it cleanly. This is the direct analogue of <code>LocoClient.Move()</code> on a real G1 &mdash; you're asking for a velocity and letting something else work out the joint trajectories.</p>
+
+  <h3>Actuators — the low-level route</h3>
+  <p>For direct control, address actuators by name through the MuJoCo scene:</p>
+  <pre><code>scene = sess.scene()
+scene.set_control(named={
+    "left_shoulder_pitch": 0.3,
+    "left_elbow": -0.5,
+})</code></pre>
+  <p><strong>Use names, not indices.</strong> Index ordering changes when a model is edited, and an index-based script that silently drives the wrong joint after someone adjusts the scene is a genuinely nasty bug &mdash; the same hazard as joint indexing on real hardware (<a class="xref" href="Unitree_G1_Field_Guide.html#ch6">G1 guide, Chapter 6</a>), minus the broken gearbox. Discover what's available rather than assuming:</p>
+  <pre><code>sess.list_robots()
+sess.list_policies()
+info = sess.get_model_info()
+for j in info.joints:
+    print(j)</code></pre>
+
+  <h3>Which to use</h3>
+  <table>
+    <tr><th>Use a policy when</th><th>Use actuators when</th></tr>
+    <tr><td>You want locomotion that works, now</td><td>You're writing the controller yourself</td></tr>
+    <tr><td>Testing behaviour above the walking layer</td><td>Doing torque or impedance control</td></tr>
+    <tr><td>Generating demonstrations of normal motion</td><td>Reproducing a hardware controller exactly</td></tr>
+    <tr><td>You want the sim to match high-level hardware control</td><td>You want the sim to match <code>rt/lowcmd</code></td></tr>
+  </table>
+
+  <h2 class="chap" id="ch6">Cameras &amp; Observations <span class="n">— Chapter 6</span></h2>
+  <p class="intro">What your policy can see determines what it can learn. Getting observations right — and honest — is more consequential than most people expect.</p>
+
+  <h3>Kinds of observation</h3>
+  <ul>
+    <li><strong>Proprioception</strong> &mdash; joint positions, velocities, torques; the robot's sense of its own body. Cheap, low-dimensional, and available on real hardware.</li>
+    <li><strong>IMU</strong> &mdash; orientation and angular velocity of the base. Essential for anything balancing.</li>
+    <li><strong>Cameras</strong> &mdash; rendered RGB or depth from any viewpoint in the scene.</li>
+    <li><strong>Privileged state</strong> &mdash; exact object positions, ground-truth contact forces, the robot's true world pose.</li>
+  </ul>
+
+  <div class="box warn">
+    <span class="h">Privileged information is the classic simulation trap</span>
+    Simulation can tell you things reality cannot: the exact position of an object, the true friction coefficient, perfect noiseless joint velocity. It is <em>very</em> easy to write a policy that quietly depends on one of these, get excellent results, and discover on hardware that the input simply doesn't exist. <strong>Before training anything, write down every observation your policy reads and confirm each one has a real sensor behind it.</strong> If it doesn't, either remove it or plan explicitly for how you'll estimate it. There is a legitimate advanced technique &mdash; <em>privileged learning</em>, where a teacher policy uses ground truth and distils into a student that uses only real sensors &mdash; but that's a deliberate design, not an accident. Accidental privileged information is the single most common reason a policy that works in sim fails completely in the real world.
+  </div>
+
+  <h3>Matching your real sensors</h3>
+  <p>If the plan is to deploy on hardware, the simulated sensors should resemble the real ones. That means matching camera resolution, field of view, and mounting position; matching update rates (a policy trained on 100 Hz observations will struggle at 30 Hz); and adding noise, because real sensors are noisy and a policy trained on perfect data is brittle to imperfection. Deliberately degrading your simulated sensors feels wrong and is one of the highest-value things you can do for transfer.</p>
+
+  <h2 class="part-divider" id="partIII">Part III — Doing Real Work</h2>
+
+  <h2 class="chap" id="ch7">Training with LuckyEnv <span class="n">— Chapter 7</span></h2>
+  <p class="intro">LuckyEnv wraps the simulator in the Gymnasium interface, which means every off-the-shelf reinforcement-learning library works with it unmodified.</p>
+
+  <h3>The Gymnasium contract</h3>
+  <p>Gymnasium is the standard interface for RL environments, and it is deliberately tiny: <code>reset()</code> returns a starting observation; <code>step(action)</code> returns <code>(observation, reward, terminated, truncated, info)</code>. That's the whole thing. Because it's standard, algorithms from Stable-Baselines3 and similar libraries plug straight in.</p>
+  <pre><code>from luckyrobots import LuckyEnv
+
+
+def my_reward(signals):
+    return (2.0 * signals.get("track_linear_velocity", 0)
+            + 1.5 * signals.get("track_angular_velocity", 0)
+            - 0.01 * signals.get("action_rate", 0))
+
+
+env = LuckyEnv(
+    robot="unitreego2",
+    scene="velocity",
+    reward_fn=my_reward,
+    reward_terms=["track_linear_velocity", "track_angular_velocity", "action_rate"],
+    termination_terms=["fell_over", "time_out"],
+)
+
+obs, info = env.reset()
+for _ in range(100_000):
+    action = policy(obs)
+    obs, reward, terminated, truncated, info = env.step(action)
+    if terminated or truncated:
+        obs, info = env.reset()</code></pre>
+
+  <h3>Reward design is the actual work</h3>
+  <p>The reward function is where nearly all your time will go, and it is genuinely hard. The policy optimizes exactly what you wrote, not what you meant, and the gap between those two things is where reinforcement learning gets its reputation.</p>
+  <p>Note the shape of the example above &mdash; it's the standard locomotion pattern and worth understanding as a template:</p>
+  <ul>
+    <li><strong>Positive terms for the task</strong> &mdash; tracking the commanded velocity. This is what you want.</li>
+    <li><strong>Negative terms for cost</strong> &mdash; <code>action_rate</code> penalizes jerky commands, producing smoother motion that's kinder to real hardware.</li>
+    <li><strong>Weights that balance them</strong> &mdash; the coefficients are the tuning, and small changes can qualitatively change the learned behaviour.</li>
+  </ul>
+  <p>Watch for <strong>reward hacking</strong>: the policy finding a way to score well that isn't what you intended &mdash; vibrating in place to exploit a velocity term, or falling in a way that happens to end episodes profitably. Always watch the learned behaviour rather than trusting the reward curve. A rising reward curve attached to an absurd-looking policy is a very common experience, and the curve is not the thing you care about.</p>
+
+  <h3>Terminated vs truncated</h3>
+  <p>These mean genuinely different things and conflating them corrupts learning. <strong>Terminated</strong> means the episode ended because of the task &mdash; the robot fell over; that's a real outcome the policy should learn from. <strong>Truncated</strong> means it hit a time limit &mdash; an artefact of your setup, not a failure. Bootstrapping value estimates incorrectly across these two is a subtle bug that produces a policy which mysteriously underperforms, so let the library handle them separately and don't collapse them into one flag.</p>
+
+  <h2 class="chap" id="ch8">Recording Datasets <span class="n">— Chapter 8</span></h2>
+  <p class="intro">Not all robot learning is reinforcement learning. A great deal of current practice is imitation learning — collect demonstrations, fit a model to them — and that needs data in a standard format.</p>
+
+  <h3>Why record</h3>
+  <p><strong>Imitation learning</strong> sidesteps reward design entirely: instead of specifying what good behaviour scores, you show examples of it. That's often far more tractable &mdash; describing "pick up the cup nicely" as a reward function is hard; demonstrating it fifty times is easy. The cost moves from reward engineering to data collection, which is exactly where simulation helps, because collecting fifty thousand simulated episodes is a scheduling question rather than a physical one.</p>
+
+  <h3>LeRobot format</h3>
+  <p>Lucky Engine records in a format compatible with <strong>LeRobot</strong>, the increasingly standard dataset format for robot learning. Compatibility matters more than it might seem: it means your recorded data works with existing training pipelines and published models without conversion, and it means datasets can be shared between labs. Deterministic high-rate capture means episodes are labelled and reproducible, which is what makes them trainable.</p>
+
+  <h3>What makes a dataset good</h3>
+  <ul>
+    <li><strong>Diversity beats volume.</strong> Ten thousand episodes of the identical trajectory teach less than five hundred varied ones. Randomize initial conditions, object positions, and targets.</li>
+    <li><strong>Include recoveries.</strong> A dataset of only perfect executions produces a policy with no idea what to do once it's slightly off &mdash; and it will be slightly off immediately. Demonstrations that start from imperfect states are disproportionately valuable.</li>
+    <li><strong>Record failures too</strong>, labelled as such. Knowing what not to do is information.</li>
+    <li><strong>Keep provenance.</strong> Which engine version, which scene, which physics parameters, which policy generated it. A dataset you can't reproduce or interpret has a short shelf life.</li>
+  </ul>
+
+  <h2 class="chap" id="ch9">System Identification <span class="n">— Chapter 9</span></h2>
+  <p class="intro">Your simulated robot's parameters are guesses until you measure them. System identification replaces the guesses with numbers from the real machine, and it is one of the highest-leverage things you can do for transfer.</p>
+
+  <h3>The idea</h3>
+  <p>A MuJoCo model has parameters &mdash; motor gains, damping, friction, armature inertia &mdash; that came from a spec sheet or someone's estimate. Real actuators differ, sometimes substantially, and differ from each other. <strong>System identification</strong> excites the real robot with known signals, records how it actually responds, and fits model parameters that reproduce that response. The result is a simulation that behaves measurably more like your specific robot.</p>
+
+  <h3>The workflow</h3>
+  <pre><code># 1. See what presets exist for your robot
+luckyrobots sysid presets --robot go2
+
+# 2. Collect a trajectory from the REAL robot with an excitation signal
+luckyrobots sysid collect --robot unitreego2 --signal chirp \
+    --duration 15 -o traj.npz
+
+# 3. Fit model parameters to the recorded response
+luckyrobots sysid identify traj.npz -m go2.xml \
+    --preset go2:motor -o result.json
+
+# 4. Write the fitted parameters back into the model
+luckyrobots sysid apply result.json -m go2.xml -o go2_calibrated.xml</code></pre>
+  <p>A <strong>chirp</strong> is a sine sweep through a range of frequencies &mdash; it excites the system across its whole dynamic range in one short recording, which is why it's the standard choice. Fifteen seconds of well-chosen excitation tells you more than minutes of arbitrary motion.</p>
+
+  <div class="box warn">
+    <span class="h">Collection runs on real hardware — the safety rules apply</span>
+    Step 2 drives a physical robot with an excitation signal designed to provoke a wide dynamic response. That is exactly the kind of motion the <a class="xref" href="Unitree_G1_Field_Guide.html#safety">G1 guide's safety chapter</a> is about: robot on its stand, E-stop in reach, a second person watching, and start with conservative amplitudes. Sysid is a routine procedure, and it is still a procedure that deliberately shakes an actuator through its range.
+  </div>
+
+  <div class="box field">
+    <span class="h">From the field — calibrate before you train, not after</span>
+    The common and costly sequence goes like this: train a policy for a week against default model parameters, deploy it, watch it fail, then discover the simulated actuators were substantially stiffer than the real ones. Everything learned against the wrong dynamics has to be redone. Fifteen minutes of system identification <em>before</em> training would have prevented all of it. The general principle is worth carrying beyond this tool: <strong>measure the thing you're modelling before you invest heavily in the model.</strong> It's the same instinct as capturing a working <code>requirements.txt</code> the moment an environment works, or verifying joint indices before commanding a joint &mdash; a small, boring, cheap step that protects a large, expensive one. The boring step is almost always worth it, and it is almost always the one that gets skipped.
+  </div>
+
+  <h2 class="chap" id="ch10">The Sim-to-Real Gap <span class="n">— Chapter 10</span></h2>
+  <p class="intro">The most important chapter in this book. Simulation's danger isn't that it fails — it's that it succeeds convincingly, and lets you believe you're finished when you have only proven something about a model.</p>
+
+  <h3>Where the gap comes from</h3>
+  <table>
+    <tr><th>Source</th><th>What simulation gets wrong</th></tr>
+    <tr><td><strong>Actuators</strong></td><td>Real motors have backlash, stiction, current limits, and heat up. Simulated ones are ideal and tireless</td></tr>
+    <tr><td><strong>Contact</strong></td><td>The hardest thing to model. Real friction varies with surface, dust, wear, and temperature</td></tr>
+    <tr><td><strong>Sensors</strong></td><td>Real ones are noisy, delayed, occasionally drop out. Simulated ones are perfect unless you make them worse</td></tr>
+    <tr><td><strong>Latency</strong></td><td>Real control loops have delay between sensing and acting. Sim is often instantaneous</td></tr>
+    <tr><td><strong>Mass &amp; inertia</strong></td><td>CAD values differ from the assembled machine with its cables, dust, and yesterday's repair</td></tr>
+    <tr><td><strong>The unmodelled</strong></td><td>Cable drag, flex in a "rigid" link, a slightly loose bolt. Not in the model at all</td></tr>
+  </table>
+
+  <h3>Closing it</h3>
+  <ul>
+    <li><strong>System identification</strong> (<a class="xref" href="#ch9">Chapter 9</a>) &mdash; measure the real parameters instead of guessing. Do this first.</li>
+    <li><strong>Domain randomization</strong> &mdash; vary mass, friction, gains, and latency randomly across training episodes, so the policy can't overfit to one exact model and has to be robust across a range. Counter-intuitively, a policy trained on <em>deliberately imperfect</em> physics transfers better than one trained on a single carefully-tuned model.</li>
+    <li><strong>Sensor noise and latency</strong> &mdash; inject them deliberately. A policy that has only seen clean instant data is brittle to reality.</li>
+    <li><strong>Action smoothing</strong> &mdash; penalize jerky commands in the reward. Real actuators can't follow discontinuous signals, and trying damages them.</li>
+    <li><strong>Validate incrementally</strong> &mdash; don't go from simulation straight to a full hardware run. Test on the stand, then one joint, then slowly.</li>
+  </ul>
+
+  <h3>What simulation actually proves</h3>
+  <p>Worth being precise about, because the honest version is still very valuable:</p>
+  <table>
+    <tr><th>Simulation proves</th><th>Simulation does not prove</th></tr>
+    <tr><td>Your code runs without crashing</td><td>It will work on hardware</td></tr>
+    <tr><td>Your signs and indices are right</td><td>Your gains are right for real actuators</td></tr>
+    <tr><td>The logic is sound</td><td>It's robust to noise and disturbance</td></tr>
+    <tr><td>The approach is worth trying</td><td>The approach is finished</td></tr>
+    <tr><td>A whole class of bug is absent</td><td>No bugs remain</td></tr>
+  </table>
+  <p>That left column is genuinely valuable. Eliminating crashes, sign errors, and index mistakes before touching hardware is most of what makes a lab session productive rather than a debugging exercise with a robot standing idle. The mistake is only in reading the left column as the right one.</p>
+
+  <div class="box field">
+    <span class="h">From the field — simulate to eliminate, hardware to validate</span>
+    The productive division of labour is worth stating as a rule. <strong>Simulation is where you remove the bugs that would hurt.</strong> Sign errors, wrong indices, unstable gains, logic that crashes on the third iteration &mdash; catch all of it for free, at speed, repeatably. <strong>Hardware is where you find out whether it actually works.</strong> Those are different questions and neither environment answers the other's. Teams that skip simulation waste hardware time debugging things a laptop would have caught in seconds. Teams that over-trust simulation ship a policy that has never met friction and are surprised when it falls over. The good pattern is boring and effective: iterate fast in sim until nothing obviously wrong remains, calibrate the model against the real robot, add noise and randomization so the policy can't be precious, then move to hardware incrementally &mdash; on the stand, one joint, slowly &mdash; expecting to retune. Plan for that retuning as part of the work, not as evidence something went wrong.
+  </div>
+
+  <h2 class="part-divider" id="partIV">Part IV — Practice &amp; Reference</h2>
+
+  <h2 class="chap" id="ch11">Troubleshooting <span class="n">— Chapter 11</span></h2>
+  <p class="intro">Most problems are connection problems or environment problems, and both are quick to diagnose once you know where to look.</p>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td><code>connect()</code> times out</td><td>Engine isn't running, or isn't listening yet</td><td>Launch it; confirm the gRPC port; raise <code>timeout_s</code></td></tr>
+    <tr><td>Client can't find the engine</td><td><code>LUCKYENGINE_PATH</code> unset in this shell</td><td>Export it; add it to your shell profile (<a class="xref" href="#ch2">Ch 2</a>)</td></tr>
+    <tr><td><code>ImportError: luckyrobots</code></td><td>Installed into a different environment</td><td>Check <code>sys.executable</code> — <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Python_Environment_Field_Guide.html#ch3">Python guide, Ch 3</a></td></tr>
+    <tr><td>gRPC or protobuf version errors</td><td>Dependency conflict with other tooling</td><td>Fresh venv, install <code>luckyrobots</code> first</td></tr>
+    <tr><td>Robot explodes or jitters violently</td><td>Timestep too large, or gains too high</td><td>Reduce timestep; lower gains (<a class="xref" href="#ch3">Ch 3</a>)</td></tr>
+    <tr><td>Objects pass through each other</td><td>Timestep too large for the contact speed</td><td>Reduce timestep; check collision geometry</td></tr>
+    <tr><td>Actuator name not found</td><td>Name differs from the model, or scene changed</td><td><code>get_model_info()</code> and list them (<a class="xref" href="#ch5">Ch 5</a>)</td></tr>
+    <tr><td><code>nq != nu</code>, indexing breaks</td><td>Expecting positions and actuators to align</td><td>They don't — free base adds unactuated DoF (<a class="xref" href="#ch2">Ch 2</a>)</td></tr>
+    <tr><td>Runs vary with identical inputs</td><td>Unseeded randomness</td><td>Seed every RNG; check for async ordering</td></tr>
+    <tr><td>Reward rises, behaviour is absurd</td><td>Reward hacking</td><td>Watch the rollout, not the curve (<a class="xref" href="#ch7">Ch 7</a>)</td></tr>
+    <tr><td>Policy is perfect in sim, fails on hardware</td><td>Privileged observations, or no randomization</td><td>Audit every input; randomize; calibrate (<a class="xref" href="#ch10">Ch 10</a>)</td></tr>
+    <tr><td>Training is extremely slow</td><td>Rendering enabled during training</td><td>Disable rendering; you don't need pixels for state-based RL</td></tr>
+  </table>
+
+  <h2 class="chap" id="ch12">Lab Exercises <span class="n">— Chapter 12</span></h2>
+  <p class="intro">All of these run on a laptop. No robot, no lab booking, no risk.</p>
+
+  <h3>Lab 1 — Connect and inspect</h3>
+  <ol>
+    <li>Install the engine and the SDK in a fresh venv. Set <code>LUCKYENGINE_PATH</code>.</li>
+    <li>Connect and print <code>nq</code>, <code>nu</code>, and every joint name.</li>
+    <li>Explain in one sentence why <code>nq</code> and <code>nu</code> differ for a legged robot.</li>
+    <li>List the available robots and policies.</li>
+  </ol>
+
+  <h3>Lab 2 — Step the world by hand</h3>
+  <ol>
+    <li>Write a loop that steps 1000 times with zero action, printing one joint's position every 100 steps.</li>
+    <li>Compute how much simulated time passed. Compare it with wall-clock time.</li>
+    <li>Put a debugger breakpoint inside the loop (<a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/VS_Code_Field_Guide.html#ch9">VS Code guide, Ch 9</a>). Confirm physics is frozen while paused.</li>
+    <li>Explain why this is impossible on real hardware.</li>
+  </ol>
+
+  <h3>Lab 3 — Drive a policy</h3>
+  <ol>
+    <li>Acquire a locomotion policy slot and command a forward velocity.</li>
+    <li>Stream state at 30 fps and log the robot's actual velocity.</li>
+    <li>Plot commanded vs achieved velocity. Explain the tracking error.</li>
+    <li>Compare this workflow with <code>LocoClient.Move()</code> in the <a class="xref" href="Unitree_G1_Field_Guide.html#ch4">G1 guide</a>. What's the same?</li>
+  </ol>
+
+  <h3>Lab 4 — Actuators by name</h3>
+  <ol>
+    <li>Command two named actuators to fixed targets. Confirm the right joints move.</li>
+    <li>Now do it by index instead. Edit the scene slightly, re-run, and observe what breaks.</li>
+    <li>Write up why name-based addressing is worth the extra characters.</li>
+  </ol>
+
+  <h3>Lab 5 — Reward design and hacking</h3>
+  <ol>
+    <li>Build a <code>LuckyEnv</code> with a reward for forward velocity only. Train briefly with any RL library.</li>
+    <li>Watch the rollout. Describe what it actually learned to do.</li>
+    <li>Add an <code>action_rate</code> penalty and retrain. Describe the change in behaviour.</li>
+    <li>Deliberately write a hackable reward and find the exploit. This is the most instructive part.</li>
+  </ol>
+
+  <h3>Lab 6 — Audit for privileged information</h3>
+  <ol>
+    <li>Take any environment you've built and list every value in the observation.</li>
+    <li>For each, name the real sensor that would provide it on a physical robot.</li>
+    <li>Mark the ones with no real equivalent. These are your transfer risks.</li>
+    <li>Rebuild the observation using only realizable inputs. Retrain. Compare the results honestly.</li>
+  </ol>
+
+  <h2 class="chap" id="ch13">Glossary <span class="n">— Chapter 13</span></h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><strong>Lucky Engine</strong></td><td>The simulator: MuJoCo physics plus game-engine rendering and editor.</td></tr>
+    <tr><td><strong>luckyrobots</strong></td><td>The Python SDK that drives the engine over gRPC.</td></tr>
+    <tr><td><strong>MuJoCo</strong></td><td>The physics engine underneath. Research standard for contact-rich robotics.</td></tr>
+    <tr><td><strong>MJCF</strong></td><td>MuJoCo's XML model format describing links, joints, and actuators.</td></tr>
+    <tr><td><strong>gRPC</strong></td><td>The RPC protocol between your Python code and the engine process.</td></tr>
+    <tr><td><strong>Session</strong></td><td>A connection to the engine, managing lifecycle. Use it as a context manager.</td></tr>
+    <tr><td><strong>Step</strong></td><td>Advancing physics by one timestep. Sim time only moves when you step.</td></tr>
+    <tr><td><strong>Timestep</strong></td><td>Simulated duration of one step. Smaller is more accurate and slower.</td></tr>
+    <tr><td><strong>nq</strong></td><td>Size of the position state vector.</td></tr>
+    <tr><td><strong>nu</strong></td><td>Number of actuators — what you can actually command.</td></tr>
+    <tr><td><strong>Policy slot</strong></td><td>An active in-engine controller occupying a control channel.</td></tr>
+    <tr><td><strong>Actuator</strong></td><td>A commandable motor in the model. Address by name, not index.</td></tr>
+    <tr><td><strong>Gymnasium</strong></td><td>The standard RL environment interface. <code>reset()</code> and <code>step()</code>.</td></tr>
+    <tr><td><strong>LuckyEnv</strong></td><td>Gymnasium-compatible wrapper around the simulator.</td></tr>
+    <tr><td><strong>Terminated</strong></td><td>Episode ended for a task reason — e.g. the robot fell.</td></tr>
+    <tr><td><strong>Truncated</strong></td><td>Episode ended on a time limit. Not a failure; don't conflate the two.</td></tr>
+    <tr><td><strong>Reward hacking</strong></td><td>A policy scoring well by doing something you didn't intend.</td></tr>
+    <tr><td><strong>Imitation learning</strong></td><td>Learning from demonstrations instead of from a reward function.</td></tr>
+    <tr><td><strong>LeRobot</strong></td><td>A standard dataset format for robot learning.</td></tr>
+    <tr><td><strong>System identification</strong></td><td>Measuring a real robot to fit accurate model parameters.</td></tr>
+    <tr><td><strong>Chirp</strong></td><td>A frequency sweep used to excite a system across its dynamic range.</td></tr>
+    <tr><td><strong>Domain randomization</strong></td><td>Varying physics across episodes so a policy can't overfit to one model.</td></tr>
+    <tr><td><strong>Privileged information</strong></td><td>Data available only in sim. Depending on it accidentally breaks transfer.</td></tr>
+    <tr><td><strong>Sim-to-real gap</strong></td><td>The difference between simulated and physical behaviour.</td></tr>
+  </table>
+
+  <h2 class="chap" id="appA">API Cheat-Sheet <span class="n">— Appendix A</span></h2>
+  <p class="intro">The shape of the API. Verify signatures against your installed version — see the warning at the top of this book.</p>
+
+  <h3>Setup</h3>
+  <pre><code>pip install luckyrobots
+export LUCKYENGINE_PATH=/path/to/LuckyEngine     # Linux / macOS
+set LUCKYENGINE_PATH=C:\path\to\LuckyEngine.exe  # Windows</code></pre>
+
+  <h3>Connect &amp; inspect</h3>
+  <pre><code>from luckyrobots import Session
+
+with Session() as sess:
+    sess.connect(timeout_s=30.0)
+    info = sess.get_model_info()      # nq, nu, joints
+    sess.list_robots()
+    sess.list_policies()</code></pre>
+
+  <h3>Step the world</h3>
+  <pre><code>obs = sess.step(actions)              # advance one timestep</code></pre>
+
+  <h3>Policies (high-level)</h3>
+  <pre><code>robot = sess.robot("G1")
+with robot.policy_slot("Walker"):
+    robot.commands("Walker")["SetVx"] = 0.5
+    for state in robot.stream_state(target_fps=30):
+        print(state.motion_graph_active)</code></pre>
+
+  <h3>Actuators (low-level)</h3>
+  <pre><code>scene = sess.scene()
+scene.set_control(named={"left_elbow": -0.5})     # names, never indices</code></pre>
+
+  <h3>Training</h3>
+  <pre><code>from luckyrobots import LuckyEnv
+
+env = LuckyEnv(
+    robot="unitreego2",
+    scene="velocity",
+    reward_fn=my_reward,
+    reward_terms=["track_linear_velocity", "action_rate"],
+    termination_terms=["fell_over", "time_out"],
+)
+obs, info = env.reset()
+obs, reward, terminated, truncated, info = env.step(action)</code></pre>
+
+  <h3>System identification</h3>
+  <pre><code>luckyrobots sysid presets  --robot go2
+luckyrobots sysid collect  --robot unitreego2 --signal chirp --duration 15 -o traj.npz
+luckyrobots sysid identify traj.npz -m go2.xml --preset go2:motor -o result.json
+luckyrobots sysid apply    result.json -m go2.xml -o go2_calibrated.xml</code></pre>
+
+  <h3>Other API surfaces</h3>
+  <pre><code>RobotController        # drive in-engine policies and motion graphs
+MujocoScene            # full mjModel introspection and actuator control
+LuckyEngineClient      # low-level gRPC client
+AsyncSession           # asyncio-native mirror
+AsyncRobotController   # asyncio-native mirror</code></pre>
+
+  <h2 class="chap" id="appB">Choosing a Simulator <span class="n">— Appendix B</span></h2>
+  <p class="intro">Lucky Engine is one of several reasonable choices. Picking well means knowing what each is actually good at.</p>
+  <table>
+    <tr><th>Simulator</th><th>Strengths</th><th>Costs</th><th>Best for</th></tr>
+    <tr><td><strong>Lucky Engine</strong></td><td>MuJoCo physics + good rendering; editor; Python SDK; LeRobot output</td><td>Newer; smaller community than the incumbents</td><td>Vision-based learning, dataset generation, teaching</td></tr>
+    <tr><td><strong>MuJoCo</strong> (plain)</td><td>Fast, accurate contact; the research standard; huge model library</td><td>Minimal rendering; no editor; you build the tooling</td><td>Control research, papers, headless RL at scale</td></tr>
+    <tr><td><strong>Isaac Sim</strong></td><td>Photorealistic; GPU-parallel envs; strong sensor simulation</td><td>Heavy; needs a serious NVIDIA GPU; steep setup</td><td>Large-scale RL with photorealistic vision</td></tr>
+    <tr><td><strong>Gazebo</strong></td><td>Deeply ROS-integrated; mature; large plugin ecosystem</td><td>Contact physics less accurate for legged work</td><td>ROS 2 systems, navigation, sensor pipelines</td></tr>
+    <tr><td><strong>PyBullet</strong></td><td>Trivial to install; pure Python; good for teaching</td><td>Less accurate; rendering is basic</td><td>Quick experiments, coursework, prototyping</td></tr>
+  </table>
+
+  <div class="box tip">
+    <span class="h">Pick for the question you're asking</span>
+    There's no best simulator, only a best fit for a question. Testing whether a control loop's signs are right? Anything works &mdash; use whatever installs fastest. Training a vision policy you intend to deploy? Rendering fidelity is now part of your physics and matters enormously. Integrating with an existing ROS 2 navigation stack? Gazebo's integration will save you more time than better contact modelling would. Writing a paper that others must reproduce? Plain MuJoCo, because everyone has it. Choose for the specific question, and don't be precious about using two &mdash; a fast crude simulator for iteration and an accurate one for validation is a perfectly sensible setup, and closer to how experienced teams actually work.
+  </div>
+
+  <hr>
+  <div class="box field">
+    <span class="h">A closing word</span>
+    Simulation has quietly become the centre of gravity in robot learning &mdash; not because it's a substitute for hardware, but because it changes the economics of trying things. When an experiment costs a laptop-minute instead of a lab session, you run the experiment you were only going to think about, and that's where most progress actually comes from. Lucky Engine is a good instance of that shift: physics that's accurate enough to be worth trusting, rendering good enough for vision, and a Python interface plain enough to get out of the way. Use it to eliminate everything that would waste your hardware time, calibrate it against the real machine so it's modelling your robot rather than a generic one, and stay honest about the boundary in <a class="xref" href="#ch10">Chapter 10</a>. Then go and find out what the real robot thinks of your ideas.
+  </div>
+
+  <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
+
+</div>
+</div>
+
+<div id="palette" role="dialog" aria-modal="true">
+  <div id="palbox">
+    <input id="palinput" type="text" placeholder="Search the whole book&hellip;" autocomplete="off" spellcheck="false">
+    <div id="palresults"></div>
+    <div id="palhint"><span><b>&uarr;&darr;</b> navigate</span><span><b>&crarr;</b> open</span><span><b>esc</b> close</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement, body=document.body;
+  var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+  var themeBtn=document.getElementById('themebtn');
+  function applyTheme(t){root.setAttribute('data-theme',t);themeBtn.innerHTML=(t==='light')?'&#9728;':'&#9789;';LS.set('lucky-theme',t);}
+  applyTheme(LS.get('lucky-theme','dark'));
+  themeBtn.addEventListener('click',function(){applyTheme(root.getAttribute('data-theme')==='light'?'dark':'light');});
+
+  var fs=parseInt(LS.get('lucky-fs','16'),10);
+  function applyFs(){fs=Math.max(13,Math.min(21,fs));root.style.setProperty('--fs',fs+'px');LS.set('lucky-fs',fs);}
+  applyFs();
+  document.getElementById('fsup').addEventListener('click',function(){fs+=1;applyFs();});
+  document.getElementById('fsdown').addEventListener('click',function(){fs-=1;applyFs();});
+
+  var collapsed={};try{collapsed=JSON.parse(LS.get('lucky-collapsed','{}'))||{};}catch(e){collapsed={};}
+  [].forEach.call(document.querySelectorAll('.navpart'),function(part){
+    var btn=part.querySelector('button.part');var key=btn.textContent.trim();
+    if(collapsed[key])part.classList.add('collapsed');
+    btn.addEventListener('click',function(){part.classList.toggle('collapsed');collapsed[key]=part.classList.contains('collapsed');LS.set('lucky-collapsed',JSON.stringify(collapsed));});
+  });
+
+  var used={};document.querySelectorAll('[id]').forEach(function(el){used[el.id]=true;});
+  function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50);}
+  document.querySelectorAll('.content h3, .content h4').forEach(function(h){if(h.id)return;var base=slug(h.textContent)||'s',id=base,n=2;while(used[id]){id=base+'-'+(n++);}used[id]=true;h.id=id;});
+  document.querySelectorAll('.content h2.chap, .content h3').forEach(function(h){if(!h.id)return;var a=document.createElement('a');a.className='anchor';a.href='#'+h.id;a.textContent='#';a.title='Link to this section';h.appendChild(a);});
+
+  var content=document.querySelector('.content');
+  var heads=[].slice.call(content.querySelectorAll('h2.chap'));
+  function chapTitle(h){var c=h.cloneNode(true);var n=c.querySelector('.n');if(n)n.remove();var a=c.querySelector('.anchor');if(a)a.remove();return c.textContent.trim();}
+  heads.forEach(function(h){var words=0,el=h.nextElementSibling;while(el&&!(el.matches&&el.matches('h2.chap'))){words+=(el.textContent||'').split(/\s+/).length;el=el.nextElementSibling;}
+    if(words>40){var mins=Math.max(1,Math.round(words/200));var rt=document.createElement('div');rt.className='readtime';rt.innerHTML='&#128338; ~'+mins+' min read &middot; '+words.toLocaleString()+' words';if(h.nextSibling)h.parentNode.insertBefore(rt,h.nextSibling);else h.parentNode.appendChild(rt);}});
+
+  function pagerCell(h,dir){if(!h)return '<span class="empty"></span>';return '<a class="'+dir+'" href="#'+h.id+'"><div class="dir">'+(dir==='prev'?'← Previous':'Next →')+'</div><div class="ttl">'+chapTitle(h)+'</div></a>';}
+  heads.forEach(function(h,i){var pager=document.createElement('div');pager.className='pager';pager.innerHTML=pagerCell(heads[i-1],'prev')+pagerCell(heads[i+1],'next');
+    var next=heads[i+1];if(next){var target=next;if(target.previousElementSibling&&target.previousElementSibling.matches&&target.previousElementSibling.matches('h2.part-divider'))target=target.previousElementSibling;content.insertBefore(pager,target);}else{var bt=document.getElementById('backtop');var hr=content.querySelector('hr');content.insertBefore(pager,hr||bt);}});
+
+  document.querySelectorAll('.content pre').forEach(function(pre){var wrap=document.createElement('div');wrap.className='codewrap';pre.parentNode.insertBefore(wrap,pre);wrap.appendChild(pre);var btn=document.createElement('button');btn.className='copybtn';btn.textContent='Copy';wrap.appendChild(btn);
+    btn.addEventListener('click',function(){var txt=pre.innerText;var done=function(){btn.textContent='Copied!';btn.classList.add('done');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('done');},1400);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){fallback(txt);done();});}else{fallback(txt);done();}});});
+  function fallback(txt){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+
+  var navlinks=[].slice.call(document.querySelectorAll('a.navlink'));
+  var readSet={};try{readSet=JSON.parse(LS.get('lucky-read','{}'))||{};}catch(e){readSet={};}
+  var readFill=document.getElementById('readfill'),readLabel=document.getElementById('readlabel');
+  function refreshProgress(){var total=navlinks.length,done=0;navlinks.forEach(function(a){if(readSet[a.getAttribute('href')]){a.classList.add('read');done++;}else a.classList.remove('read');});readFill.style.width=(total?Math.round(done/total*100):0)+'%';readLabel.textContent=done+' of '+total+' read';}
+  navlinks.forEach(function(a){var chk=a.querySelector('.check');if(chk)chk.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('lucky-read',JSON.stringify(readSet));refreshProgress();});});
+  refreshProgress();
+
+  var navByHref={};navlinks.forEach(function(a){navByHref[a.getAttribute('href')]=a;});
+  var spyTargets=navlinks.map(function(a){var el=document.querySelector(a.getAttribute('href'));return el?{a:a,el:el,id:a.getAttribute('href')}:null;}).filter(Boolean);
+  var crumb=document.getElementById('crumb'),prog=document.getElementById('progress'),backtop=document.getElementById('backtop');var curId=null;
+  function onScroll(){var sc=window.pageYOffset,h=document.documentElement.scrollHeight-window.innerHeight;prog.style.width=(h>0?(sc/h*100):0)+'%';backtop.classList.toggle('show',sc>500);
+    var cur=spyTargets[0];for(var i=0;i<spyTargets.length;i++){if(spyTargets[i].el.getBoundingClientRect().top<=120)cur=spyTargets[i];}
+    if(cur&&cur.id!==curId){curId=cur.id;navlinks.forEach(function(a){a.classList.remove('active');});cur.a.classList.add('active');crumb.innerHTML='<b>'+cur.a.textContent.trim()+'</b>';}}
+  document.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll);window.addEventListener('load',onScroll);onScroll();
+
+  var navsearch=document.getElementById('navsearch');
+  navsearch.addEventListener('input',function(){var q=navsearch.value.trim().toLowerCase();navlinks.forEach(function(a){var hit=a.textContent.toLowerCase().indexOf(q)>=0;a.classList.toggle('hidden',q.length>0&&!hit);});if(q.length>0)document.querySelectorAll('.navpart').forEach(function(p){p.classList.remove('collapsed');});});
+
+  var index=[];
+  document.querySelectorAll('.content h2.chap').forEach(function(h){index.push({id:h.id,text:chapTitle(h),lvl:'Chapter',chap:chapTitle(h)});});
+  (function(){var curChap='';document.querySelectorAll('.content h2.chap, .content h3, .content h4').forEach(function(h){if(h.matches('h2.chap')){curChap=chapTitle(h);return;}var t=h.cloneNode(true);var a=t.querySelector('.anchor');if(a)a.remove();index.push({id:h.id,text:t.textContent.trim(),lvl:(h.tagName==='H3'?'Section':'Topic'),chap:curChap});});})();
+  var palette=document.getElementById('palette'),palinput=document.getElementById('palinput'),palresults=document.getElementById('palresults');var palSel=0,palShown=[];
+  function renderPal(q){q=q.trim().toLowerCase();palShown=!q?index.slice(0,40):index.filter(function(it){return it.text.toLowerCase().indexOf(q)>=0||it.chap.toLowerCase().indexOf(q)>=0;}).slice(0,60);palSel=0;
+    palresults.innerHTML=palShown.length?palShown.map(function(it,i){var ctx=(it.lvl!=='Chapter'&&it.chap)?'<span class="ctx">'+it.chap+'</span>':'';return '<div class="palitem'+(i===0?' sel':'')+'" data-id="'+it.id+'"><span class="lvl">'+it.lvl+'</span><span class="txt">'+it.text+'</span>'+ctx+'</div>';}).join(''):'<div class="palitem"><span class="txt" style="color:var(--faint)">No matches</span></div>';}
+  function openPal(){palette.classList.add('open');palinput.value='';renderPal('');palinput.focus();}
+  function closePal(){palette.classList.remove('open');}
+  function goPal(){var it=palShown[palSel];if(it){closePal();location.hash='#'+it.id;}}
+  document.getElementById('palbtn').addEventListener('click',openPal);
+  palinput.addEventListener('input',function(){renderPal(palinput.value);});
+  palresults.addEventListener('click',function(e){var d=e.target.closest('.palitem');if(d&&d.dataset.id){closePal();location.hash='#'+d.dataset.id;}});
+  palette.addEventListener('click',function(e){if(e.target===palette)closePal();});
+  palinput.addEventListener('keydown',function(e){var items=palresults.querySelectorAll('.palitem');
+    if(e.key==='ArrowDown'){e.preventDefault();palSel=Math.min(palShown.length-1,palSel+1);}else if(e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(0,palSel-1);}else if(e.key==='Enter'){e.preventDefault();goPal();return;}else if(e.key==='Escape'){closePal();return;}else return;
+    items.forEach(function(d,i){d.classList.toggle('sel',i===palSel);});if(items[palSel])items[palSel].scrollIntoView({block:'nearest'});});
+
+  var scrim=document.getElementById('scrim');
+  function closeNav(){body.classList.remove('navopen');}
+  document.getElementById('hamburger').addEventListener('click',function(){body.classList.toggle('navopen');});
+  scrim.addEventListener('click',closeNav);
+  navlinks.forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=980)closeNav();});});
+
+  document.addEventListener('keydown',function(e){var tag=(e.target.tagName||'').toLowerCase(),typing=(tag==='input'||tag==='textarea');
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal();return;}
+    if(typing)return;
+    if(e.key==='/'){e.preventDefault();openPal();return;}
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var idx=spyTargets.findIndex(function(s){return s.id==='#'+curId;});if(idx<0)idx=0;var go=e.key==='ArrowRight'?spyTargets[idx+1]:spyTargets[idx-1];if(go){e.preventDefault();location.hash=go.id;}}
+    else if(e.key.toLowerCase()==='t'){window.scrollTo({top:0,behavior:'smooth'});}
+    else if(e.key.toLowerCase()==='r'){var a=navByHref['#'+curId];if(a){var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('lucky-read',JSON.stringify(readSet));refreshProgress();}}
+    else if(e.key.toLowerCase()==='b'){body.classList.toggle('navopen');}});
+})();
+</script>
+
+</body>
+</html>

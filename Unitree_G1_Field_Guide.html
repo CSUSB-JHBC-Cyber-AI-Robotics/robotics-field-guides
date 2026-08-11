@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A practical guide to the Unitree G1 humanoid — network setup, the SDK2 DDS interface, low-level and high-level control, joint indexing, the audio and locomotion clients, safety procedure, and how to debug a robot that will not respond.">
+<title>The Unitree G1 Field Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --panel3:#222b3a;
+    --ink:#c9d1d9; --dim:#8b949e; --faint:#6e7681;
+    --cyan:#39d0d8; --orange:#ff9e44; --green:#56d364; --red:#f47272;
+    --amber:#e3b341; --purple:#bc8cff; --blue:#6cb6ff; --pink:#f778ba;
+    --line:#30363d; --code:#0b1622; --sel:#1f6feb44;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+    --fs:16px; --navw:316px; --topbarh:50px;
+    --accent:var(--orange);
+  }
+  html[data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef1f5; --panel3:#e4e9f0;
+    --ink:#1f2328; --dim:#57606a; --faint:#818b98;
+    --cyan:#0b8c97; --orange:#bc5d18; --green:#1a7f37; --red:#cf222e;
+    --amber:#9a6700; --purple:#8250df; --blue:#0969da; --pink:#bf3989;
+    --line:#d0d7de; --code:#f3f5f8; --sel:#0969da22;
+    --shadow:0 8px 30px rgba(140,149,159,.25);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  ::selection{background:var(--sel)}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.65;font-size:var(--fs);transition:background .25s ease,color .25s ease}
+  a{color:var(--accent)}
+  /* ---- commit-graph theme backdrop ---- */
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%23ff9e44' stroke-width='1.5' opacity='0.5'%3E%3Cpath d='M34 0 V120'/%3E%3Cpath d='M34 30 C34 44 78 42 78 56 C78 70 34 68 34 82'/%3E%3C/g%3E%3Cg fill='%23ff9e44' opacity='0.65'%3E%3Ccircle cx='34' cy='16' r='3'/%3E%3Ccircle cx='34' cy='100' r='3'/%3E%3Ccircle cx='78' cy='56' r='3'/%3E%3C/g%3E%3C/svg%3E");background-size:120px 120px;background-repeat:repeat}
+  html[data-theme="light"] #fx{opacity:.07}
+  /* ---- engine ---- */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--orange),var(--red));z-index:60;transition:width .1s linear}
+  #topbar{position:fixed;top:0;left:var(--navw);right:0;height:var(--topbarh);z-index:45;display:flex;align-items:center;gap:10px;padding:0 20px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  #topbar .crumb{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  #topbar .crumb b{color:var(--ink)}
+  #topbar button,#topbar .kbtn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);height:32px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;transition:all .15s ease}
+  #topbar button:hover,#topbar .kbtn:hover{border-color:var(--accent);color:var(--accent)}
+  #topbar .icobtn{width:32px;padding:0;justify-content:center;font-size:15px}
+  #hamburger{display:none}
+  .kbtn .k{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  #nav{position:fixed;top:0;left:0;width:var(--navw);height:100vh;overflow-y:auto;background:color-mix(in srgb,var(--panel) 92%,transparent);border-right:1px solid var(--line);padding:16px 12px 80px;z-index:50;backdrop-filter:blur(6px);scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .25s ease}
+  #nav::-webkit-scrollbar{width:9px}#nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+  #nav .brand{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+  #nav .brand .logo{width:28px;height:28px;flex:none}
+  #nav h1{font-size:14px;color:var(--accent);margin:0;letter-spacing:.3px}
+  #nav .sub{font-size:11px;color:var(--dim);margin:2px 0 10px 37px}
+  #navsearch{width:100%;background:var(--code);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px 8px 30px;font-size:12.5px;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+  #navsearch:focus{outline:none;border-color:var(--accent)}
+  #readbar{margin:10px 2px 6px;font-size:11px;color:var(--dim)}
+  #readbar .track{height:5px;background:var(--panel3);border-radius:3px;margin-top:4px;overflow:hidden}
+  #readbar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .3s ease}
+  .navpart{margin-top:8px}
+  button.part{width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--purple);font-weight:700;padding:8px 6px 4px;display:flex;align-items:center;justify-content:space-between;font-family:inherit}
+  button.part:hover{color:var(--accent)}
+  button.part .caret{transition:transform .2s ease;font-size:9px;color:var(--faint)}
+  .navpart.collapsed button.part .caret{transform:rotate(-90deg)}
+  .navlinks{overflow:hidden;transition:max-height .25s ease;max-height:2400px}
+  .navpart.collapsed .navlinks{max-height:0}
+  a.navlink{display:flex;align-items:center;gap:7px;color:var(--dim);text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px;border-left:2px solid transparent;line-height:1.4;transition:all .12s ease}
+  a.navlink:hover{color:var(--ink);background:var(--panel2)}
+  a.navlink.active{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+  a.navlink.hidden{display:none}
+  a.navlink .check{width:14px;height:14px;flex:none;border:1.5px solid var(--line);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all .15s ease}
+  a.navlink.read .check{background:var(--green);border-color:var(--green);color:#04210c}
+  a.navlink.read{color:var(--faint)}
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:46;opacity:0;pointer-events:none;transition:opacity .25s}
+  body.navopen #scrim{opacity:1;pointer-events:auto}
+  #wrap{position:relative;z-index:1;margin-left:var(--navw);padding:calc(var(--topbarh) + 4px) 40px 0}
+  .content{max-width:880px;margin:0 auto;padding:30px 0 140px}
+  h2.chap{font-size:29px;color:var(--accent);border-bottom:2px solid var(--accent);padding-bottom:8px;margin:64px 0 4px;scroll-margin-top:64px;position:relative}
+  h2.chap .n{color:var(--faint);font-size:17px;font-weight:400}
+  .readtime{font-size:12px;color:var(--faint);margin:0 0 14px;display:flex;align-items:center;gap:6px}
+  h2.part-divider{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:var(--purple);margin:80px 0 0;padding:0;border:none;scroll-margin-top:64px;font-weight:700}
+  h3{font-size:20px;color:var(--orange);margin:34px 0 8px;scroll-margin-top:64px}
+  h4{font-size:15px;color:var(--purple);margin:22px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  .anchor{opacity:0;margin-left:8px;font-size:.7em;text-decoration:none;color:var(--faint);transition:opacity .15s}
+  h2.chap:hover .anchor,h3:hover .anchor{opacity:1}
+  p{margin:10px 0}ul,ol{margin:10px 0;padding-left:24px}li{margin:5px 0}
+  strong{color:var(--ink);font-weight:600}html[data-theme="dark"] strong{color:#e6edf3}em{color:var(--ink)}
+  code{background:var(--code);color:var(--accent);padding:1px 6px;border-radius:4px;font-family:'Consolas','Courier New',monospace;font-size:13.5px}
+  .codewrap{position:relative;margin:14px 0}
+  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0}
+  pre code{background:none;color:#d6e3f0;padding:0;font-size:13.5px;line-height:1.55}
+  pre .c{color:var(--faint)}pre .k{color:var(--orange)}pre .o{color:var(--green)}pre .a{color:var(--amber)}
+  .copybtn{position:absolute;top:8px;right:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;font-size:11px;padding:3px 9px;cursor:pointer;opacity:0;transition:all .15s;font-family:inherit}
+  .codewrap:hover .copybtn{opacity:1}.copybtn:hover{border-color:var(--accent);color:var(--accent)}.copybtn.done{color:var(--green);border-color:var(--green)}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent)}
+  tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+  table.lookup th{position:sticky;top:var(--topbarh);z-index:2}
+  .box{border-radius:10px;padding:12px 16px;margin:16px 0;border-left:4px solid;position:relative;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+  .box .h{font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:12px;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .box .h::before{font-size:14px;font-family:'Segoe UI Emoji',sans-serif}
+  .field{border-color:var(--cyan)}.field .h{color:var(--cyan)}.field .h::before{content:"\1F500"}
+  .tip{border-color:var(--green)}.tip .h{color:var(--green)}.tip .h::before{content:"\1F4A1"}
+  .warn{border-color:var(--amber)}.warn .h{color:var(--amber)}.warn .h::before{content:"\26A0\FE0F"}
+  .danger{border-color:var(--red)}.danger .h{color:var(--red)}.danger .h::before{content:"\1F6D1"}
+  .lab{border-color:var(--purple)}.lab .h{color:var(--purple)}.lab .h::before{content:"\1F9EA"}
+  .case{border-color:var(--blue)}.case .h{color:var(--blue)}.case .h::before{content:"\1F4DC"}
+  .cmd{border-color:var(--orange)}.cmd .h{color:var(--orange)}.cmd .h::before{content:"\2328\FE0F"}
+  .intro{font-size:15px;color:var(--dim);font-style:italic;border-left:3px solid var(--line);padding-left:14px;margin:8px 0 20px}
+  .cover{padding:30px 0 22px;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .cover h1{font-size:44px;color:var(--accent);margin:0 0 6px;letter-spacing:.5px;background:linear-gradient(90deg,var(--orange),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .cover .tag{font-size:18px;color:var(--orange);margin-bottom:18px}
+  .cover .by{font-size:14px;color:var(--dim)}
+  .cover .ed{font-size:12px;color:var(--faint);margin-top:14px;letter-spacing:.5px}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:monospace}
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0}
+  a.xref{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)}a.xref:hover{border-bottom-style:solid}
+  figure{margin:22px 0;text-align:center}
+  figure svg{max-width:100%;height:auto;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px}
+  figcaption{font-size:12.5px;color:var(--dim);margin-top:8px;font-style:italic}
+  svg text{font-family:'Segoe UI',system-ui,sans-serif}
+  svg .box-f{fill:var(--panel2);stroke:var(--orange);stroke-width:1.5}
+  svg .box-w{fill:var(--panel2);stroke:var(--amber);stroke-width:1.5}
+  svg .box-d{fill:var(--panel2);stroke:var(--red);stroke-width:1.5}
+  svg .box-b{fill:var(--panel2);stroke:var(--blue);stroke-width:1.5}
+  svg .box-g{fill:var(--panel2);stroke:var(--green);stroke-width:1.5}
+  svg .box-v{fill:var(--panel2);stroke:var(--purple);stroke-width:1.5}
+  svg .lbl{fill:var(--ink);font-size:13px}svg .lbl-s{fill:var(--dim);font-size:11px}svg .lbl-t{fill:var(--orange);font-size:13px;font-weight:700}
+  svg .arr{stroke:var(--dim);stroke-width:1.5;fill:none}svg .arrm{stroke:var(--ink);stroke-width:1.5;fill:none}
+  .pager{display:flex;gap:14px;margin:50px 0 0;border-top:1px solid var(--line);padding-top:22px}
+  .pager a{flex:1;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:12px 16px;color:var(--ink);transition:all .15s ease;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+  .pager a:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .pager .dir{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .pager .ttl{font-size:14px;color:var(--accent);margin-top:3px}.pager .next{text-align:right}.pager .empty{visibility:hidden}
+  #palette{position:fixed;inset:0;z-index:70;display:none;align-items:flex-start;justify-content:center;background:rgba(1,4,9,.6);backdrop-filter:blur(3px);padding-top:12vh}
+  #palette.open{display:flex}
+  #palbox{width:min(620px,92vw);max-height:70vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  #palinput{border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:16px;padding:16px 18px;font-family:inherit;outline:none}
+  #palresults{overflow-y:auto;padding:6px}
+  .palitem{display:flex;align-items:baseline;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer}
+  .palitem .lvl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);min-width:46px}
+  .palitem .txt{font-size:14px;color:var(--ink)}.palitem .ctx{font-size:11px;color:var(--faint);margin-left:auto}
+  .palitem.sel,.palitem:hover{background:var(--panel2)}.palitem.sel .txt{color:var(--accent)}
+  #palhint{padding:8px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);display:flex;gap:14px}#palhint b{color:var(--dim);font-weight:600}
+  .backtop{position:fixed;bottom:22px;right:24px;background:var(--panel2);border:1px solid var(--line);color:var(--accent);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:17px;opacity:0;pointer-events:none;transition:opacity .25s,transform .15s;z-index:40;box-shadow:var(--shadow)}
+  .backtop.show{opacity:.9;pointer-events:auto}.backtop:hover{opacity:1;transform:translateY(-3px)}
+  @media(max-width:980px){:root{--navw:0px}#nav{transform:translateX(-105%);width:300px;box-shadow:var(--shadow)}body.navopen #nav{transform:translateX(0)}#topbar{left:0}#hamburger{display:inline-flex}#wrap{padding-left:18px;padding-right:18px}}
+  @media print{#nav,#topbar,#progress,.backtop,.copybtn,.pager,.anchor,#fx{display:none!important}#wrap{margin:0;padding:0}}
+</style>
+
+<style>
+  :root{--accent:var(--amber)}
+  #progress,#readbar .fill{background:linear-gradient(90deg,var(--amber),var(--orange))}
+  .cover h1{background:linear-gradient(90deg,var(--amber),var(--orange))}
+  .cover .tag{color:var(--amber)}
+  h3{color:var(--amber)}
+  h4,h2.part-divider,button.part{color:var(--orange)}
+  pre .k{color:var(--amber)}
+  .cmd{border-color:var(--amber)}.cmd .h{color:var(--amber)}
+  .lab{border-color:var(--orange)}.lab .h{color:var(--orange)}
+  svg .box-f{stroke:var(--amber)}svg .lbl-t{fill:var(--amber)}
+  svg .box-v{stroke:var(--orange)}
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.32;
+    background:
+      linear-gradient(rgba(227,179,65,.05) 2px,transparent 2px) 0 0/100% 34px,
+      linear-gradient(90deg,rgba(255,158,68,.035) 2px,transparent 2px) 0 0/34px 100%}
+  html[data-theme="light"] #fx{opacity:.2}
+</style>
+
+<style>
+  /* links to Field Guides that live outside this site — kept readable, not clickable */
+  .xref-offsite{color:var(--dim);border-bottom:1px dotted var(--faint);cursor:help}
+</style>
+</head>
+<body>
+<div id="fx" aria-hidden="true"></div>
+<div id="progress"></div>
+
+<nav id="nav">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="11" y="3" width="10" height="8" rx="3" fill="none" stroke="var(--amber)" stroke-width="1.8"/>
+      <circle cx="14" cy="7" r="1" fill="var(--amber)"/><circle cx="18" cy="7" r="1" fill="var(--amber)"/>
+      <path d="M16 11 v4" stroke="var(--amber)" stroke-width="1.8"/>
+      <rect x="10" y="15" width="12" height="9" rx="2.5" fill="none" stroke="var(--orange)" stroke-width="1.8"/>
+      <path d="M10 17 L5 21 M22 17 L27 21" stroke="var(--orange)" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M13 24 v5 M19 24 v5" stroke="var(--orange)" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <h1>UNITREE G1 FIELD GUIDE</h1>
+  </div>
+  <div class="sub">A Humanoid You Can Actually Program</div>
+  <input id="navsearch" type="text" placeholder="Filter chapters&hellip;" autocomplete="off" spellcheck="false">
+  <div id="readbar"><span id="readlabel">0 of 0 read</span><div class="track"><div class="fill" id="readfill"></div></div></div>
+
+  <div class="navpart">
+    <button class="part">Front Matter <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#how-to-read"><span class="check">&#10003;</span>How to Read This Book</a>
+      <a class="navlink" href="#safety"><span class="check">&#10003;</span>Safety First — Read This</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part I &mdash; The Machine <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch1"><span class="check">&#10003;</span>1 &middot; What the G1 Is</a>
+      <a class="navlink" href="#ch2"><span class="check">&#10003;</span>2 &middot; Getting Connected</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part II &mdash; Talking to It <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch3"><span class="check">&#10003;</span>3 &middot; The SDK &amp; DDS Interface</a>
+      <a class="navlink" href="#ch4"><span class="check">&#10003;</span>4 &middot; High-Level Control</a>
+      <a class="navlink" href="#ch5"><span class="check">&#10003;</span>5 &middot; Low-Level Control</a>
+      <a class="navlink" href="#ch6"><span class="check">&#10003;</span>6 &middot; Joints &amp; Indexing</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part III &mdash; Building On It <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch7"><span class="check">&#10003;</span>7 &middot; Audio, Voice &amp; the LED</a>
+      <a class="navlink" href="#ch8"><span class="check">&#10003;</span>8 &middot; Reading Sensors</a>
+      <a class="navlink" href="#ch9"><span class="check">&#10003;</span>9 &middot; Bridging to ROS 2</a>
+      <a class="navlink" href="#ch10"><span class="check">&#10003;</span>10 &middot; Simulate Before You Deploy</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part IV &mdash; Practice &amp; Reference <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch11"><span class="check">&#10003;</span>11 &middot; Troubleshooting</a>
+      <a class="navlink" href="#ch12"><span class="check">&#10003;</span>12 &middot; Lab Exercises</a>
+      <a class="navlink" href="#ch13"><span class="check">&#10003;</span>13 &middot; Glossary</a>
+      <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; Command Cheat-Sheet</a>
+      <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Pre-Flight Checklist</a>
+    </div>
+  </div>
+</nav>
+
+<div id="scrim"></div>
+
+<header id="topbar">
+  <button id="hamburger" class="icobtn" title="Menu" aria-label="Toggle navigation">&#9776;</button>
+  <div class="crumb" id="crumb">The Unitree G1 Field Guide</div>
+  <button class="kbtn" id="palbtn" title="Search everything (Ctrl-K)"><span>&#128269; Search</span> <span class="k">Ctrl K</span></button>
+  <button class="icobtn" id="fsdown" title="Smaller text">A&#8722;</button>
+  <button class="icobtn" id="fsup" title="Larger text">A+</button>
+  <button class="icobtn" id="themebtn" title="Toggle light/dark">&#9789;</button>
+</header>
+
+<div id="wrap">
+<div class="content">
+
+  <div class="cover">
+    <h1>The Unitree G1 Field Guide</h1>
+    <div class="tag">A Humanoid You Can Actually Program</div>
+    <div class="by">The G1 is a real humanoid robot with real mass, real torque, and an SDK that will let you command any joint directly the moment you ask it to. That combination is exactly what makes it a good teaching platform and exactly what makes it worth respecting. This book covers the parts you need to work with one competently: how to reach it over the network, how its publish&ndash;subscribe interface is actually structured, the difference between asking it to walk and driving its motors yourself, and the safety habits that separate a productive lab session from an expensive one.</div>
+    <div class="ed">A companion in the Field Guide series &middot; pairs with the ROS 2 &amp; Robotics Installation guides &middot; offline, self-contained</div>
+  </div>
+
+<div class="box tip">
+    <span class="h">This book is interactive</span>
+    Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to search every heading; tick the sidebar <strong>checkboxes</strong> to track progress (or press <kbd>R</kbd>); use <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> to move chapter to chapter; toggle light/dark and text size top-right; hover any command block to <strong>copy</strong> it. Look for <span style="color:var(--amber)">&#x2328;&#xFE0F; Try it</span> boxes &mdash; the read-only ones are safe any time; the ones that move the robot are marked, and they assume the pre-flight checklist in <a class="xref" href="#appB">Appendix B</a>. Everything works offline.
+  </div>
+
+  <div class="box warn">
+    <span class="h">This book describes a class of platform, not a fixed spec</span>
+    Unitree ships firmware and SDK updates regularly, and configurations differ between the 23-DoF and 29-DoF variants, between EDU and standard units, and between lab setups. Everything here reflects the SDK2 generation and the common lab configuration, and the concepts &mdash; DDS topics, the high/low-level split, joint indexing, the safety model &mdash; are stable across versions. <strong>The specific numbers are not.</strong> Verify IP addresses, joint counts, and joint ordering against your own robot and the documentation shipped with your firmware before you send a command that moves anything. When this guide and your robot disagree, your robot is right.
+  </div>
+
+  <h2 class="chap" id="how-to-read">How to Read This Book <span class="n">— Front Matter</span></h2>
+  <p class="intro">This is a hardware book, which changes how you should read it. In the other guides in this series a mistake costs you an afternoon. Here it can cost a gearbox, or a hand.</p>
+
+  <div class="box field">
+    <span class="h">The journey, part by part</span>
+    <strong>Safety First</strong> is not skippable and is deliberately placed before Chapter 1. <strong>Part I (The Machine)</strong> covers what the G1 physically is and how to reach it over the network &mdash; the step that blocks everyone on day one. <strong>Part II (Talking to It)</strong> is the core: the SDK's DDS interface, the crucial distinction between high-level and low-level control, and how joints are indexed. <strong>Part III (Building On It)</strong> covers the audio and voice pipeline, reading sensor data, bridging into ROS 2, and why you should prove your code in simulation first. <strong>Part IV</strong> is troubleshooting, labs, and the pre-flight checklist worth printing.
+  </div>
+
+  <div class="box tip">
+    <span class="h">How to actually use it</span>
+    Read Parts I and II before your first lab session, not during it &mdash; hardware time is scarce and shared, and reading while a robot is powered is a poor use of both. Chapters 3 and 5 are the ones to understand properly; everything else you can look up. If you're new to publish&ndash;subscribe, read <a class="xref" href="ROS2_Field_Guide.html#ch3">Chapter 3 of the ROS 2 guide</a> first &mdash; the G1 uses the same model over raw DDS, and it's much easier to learn the pattern on a laptop than on a humanoid.
+  </div>
+
+  <h2 class="chap" id="safety">Safety First — Read This <span class="n">— Front Matter</span></h2>
+  <p class="intro">The G1 weighs about 35 kg, has actuators that can move faster than you can react, and will execute exactly what you tell it to with no judgement of its own. Everything in this chapter is here because someone learned it the expensive way.</p>
+
+  <h3>The non-negotiables</h3>
+  <ul>
+    <li><strong>Know where the E-stop is, and be able to reach it, before you power on.</strong> Not "know that there is one" &mdash; have a hand near it. This applies to whoever is at the keyboard <em>and</em> whoever is nearest the robot.</li>
+    <li><strong>Suspend the robot on its stand for all low-level work.</strong> Feet off the ground means a bad command produces a flailing limb rather than a falling 35 kg machine.</li>
+    <li><strong>Clear the volume it can reach.</strong> Arms extend further than people estimate. That includes people, laptops on the floor, and the cable you are about to trip over.</li>
+    <li><strong>Never work alone with a powered robot.</strong> One person drives, one person watches with a hand near the stop. This is the standard everywhere it matters and it exists because the driver is looking at a screen.</li>
+    <li><strong>Start slow, start small.</strong> First motion of any new script: one joint, a few degrees, low gains. Confirm the sign of the motion is what you expected before you increase anything.</li>
+    <li><strong>Test in simulation first.</strong> A control loop with a sign error is obvious in sim and violent on hardware (<a class="xref" href="#ch10">Chapter 10</a>).</li>
+    <li><strong>Never leave a powered robot unattended</strong>, including "just while I fix this import".</li>
+  </ul>
+
+  <div class="box warn">
+    <span class="h">The specific way people get hurt</span>
+    It is almost never a dramatic failure. It's a routine one: someone is debugging, changes a gain or a sign, re-runs the script out of habit without thinking about what the robot will do this time, and the arm swings. The robot did exactly what it was told. <strong>The habit that prevents this is a deliberate pause before every run &mdash; say out loud what you expect the robot to do.</strong> If you can't state it in one sentence, don't run it yet. That sounds fussy right up until the first time it stops you, and every lab that has been doing this a while does it. The pre-flight checklist in <a class="xref" href="#appB">Appendix B</a> formalizes it.
+  </div>
+
+  <h3>Damping is your friend</h3>
+  <p>The G1's <strong>damping</strong> state makes joints compliant &mdash; they resist motion gently instead of holding position stiffly, so the robot sags softly rather than fighting or collapsing. It is the safe resting state and the thing to return to whenever you are unsure. Know how to command it from the remote and from code before you need it, because the moment you need it you will not want to be looking it up.</p>
+
+  <h2 class="part-divider" id="partI">Part I — The Machine</h2>
+
+  <h2 class="chap" id="ch1">What the G1 Is <span class="n">— Chapter 1</span></h2>
+  <p class="intro">A humanoid robot in a genuinely new category: small enough and cheap enough to sit in a university lab, capable enough to be a serious research platform, and open enough that a student can command its joints directly.</p>
+
+  <h3>The shape of it</h3>
+  <p>The G1 is a bipedal humanoid roughly 1.3 m tall and around 35 kg. It ships in variants &mdash; commonly <strong>23 DoF</strong> and <strong>29 DoF</strong> &mdash; where the higher count adds waist articulation and more capable wrists. Onboard it carries an IMU, a depth camera and LIDAR on most configurations, a microphone array and speaker, and a programmable chest LED. Internally it runs two computers: a locomotion computer that owns balance and walking, and a development computer that is yours.</p>
+
+  <h3>Why the two-computer split matters</h3>
+  <p>This is the architectural fact that explains most of the SDK. The <strong>locomotion computer</strong> runs the balance controller &mdash; a high-rate loop keeping a fundamentally unstable machine upright. You do not get to interrupt that, and you should not want to. The <strong>development computer</strong> is where your code runs, and it talks to the locomotion computer over the internal network.</p>
+  <p>So "controlling the robot" means sending messages to a system that is already busy keeping itself standing. When you use high-level control (<a class="xref" href="#ch4">Chapter 4</a>) you are asking that controller to walk somewhere. When you use low-level control (<a class="xref" href="#ch5">Chapter 5</a>) you are partly displacing it &mdash; which is why low-level work belongs on a stand.</p>
+
+  <h3>Where it sits in the field</h3>
+  <table>
+    <tr><th></th><th>Unitree G1</th><th>Quadruped (Go2)</th><th>Industrial arm</th></tr>
+    <tr><td>Shape</td><td>Humanoid — human spaces and tools</td><td>Four legs — very stable on rough ground</td><td>Fixed base, one arm</td></tr>
+    <tr><td>Hard part</td><td>Balance. It's inherently unstable</td><td>Locomotion is comparatively solved</td><td>Precision and repeatability</td></tr>
+    <tr><td>Falls over?</td><td>Yes, and it's the main hazard</td><td>Rarely</td><td>No</td></tr>
+    <tr><td>Good for teaching</td><td>Whole-body control, HRI, perception</td><td>Navigation, field robotics</td><td>Manipulation, industrial process</td></tr>
+  </table>
+  <p>The humanoid form is chosen not because it's optimal &mdash; it usually isn't &mdash; but because the world is built for human bodies. Doorknobs, stairs, tools, and workspaces all assume a particular morphology, and a machine with that shape can use them without modifying the world first.</p>
+
+  <h2 class="chap" id="ch2">Getting Connected <span class="n">— Chapter 2</span></h2>
+  <p class="intro">Network configuration is where every first session stalls. There is no DHCP server on the robot, so nothing works until you set an address by hand.</p>
+
+  <h3>The internal network</h3>
+  <p>The G1 has an internal Ethernet switch and every device on it lives on <strong>192.168.123.0/24</strong>. Typical assignments:</p>
+  <table>
+    <tr><th>Device</th><th>Address</th><th>Notes</th></tr>
+    <tr><td>Locomotion computer</td><td><code>192.168.123.161</code></td><td>Runs the balance controller. Not yours.</td></tr>
+    <tr><td>Development computer</td><td><code>192.168.123.164</code></td><td>Onboard, yours to use</td></tr>
+    <tr><td>LIDAR (Livox Mid-360)</td><td><code>192.168.123.20</code></td><td>Where fitted</td></tr>
+    <tr><td>Your laptop</td><td><code>192.168.123.99</code> or similar</td><td>Pick a free address on the subnet</td></tr>
+  </table>
+  <p>Confirm these against your own unit's documentation &mdash; lab setups vary and this is exactly the kind of detail that changes between configurations.</p>
+
+  <h3>Setting a static address</h3>
+  <pre><code># Find your wired interface name first
+ip link show                                  # e.g. enp2s0, eth0
+
+# Temporary (gone on reboot) — good for a lab session
+sudo ip addr add 192.168.123.99/24 dev enp2s0
+sudo ip link set enp2s0 up
+
+# Verify
+ip addr show enp2s0
+ping -c 3 192.168.123.161                     # the locomotion computer</code></pre>
+  <p>If the ping fails, nothing else in this book will work. Check the cable, check the interface is up, check you're on the right subnet. The <a class="xref" href="Networking_Field_Guide.html#ch5">Networking Field Guide</a> covers addressing and subnetting if any of that is unfamiliar.</p>
+
+  <h3>SSH to the onboard computer</h3>
+  <pre><code>ssh unitree@192.168.123.164</code></pre>
+  <p>Set up a key rather than typing a password repeatedly, and add a host entry so you can type <code>ssh g1</code>. Once that works, VS Code's Remote-SSH will open the robot's filesystem as if it were local, which is the most comfortable way to develop onboard &mdash; see the <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/VS_Code_Field_Guide.html#ch11">VS Code guide</a> and the <a class="xref" href="Robotics_Installation_Field_Guide.html#ch4">Robotics Installation Guide</a>.</p>
+
+  <div class="box warn">
+    <span class="h">The interface name is not optional</span>
+    Nearly every SDK example takes a network interface name as its first argument &mdash; <code>python3 example.py enp2s0</code> &mdash; because DDS has to be told which interface to communicate on. Get it wrong and you will see the single most common G1 symptom: <strong>the script runs, prints nothing, reports no error, and does nothing.</strong> It is bound to an interface with no robot on it, waiting forever for messages that will never arrive. Before blaming the SDK, run <code>ip link show</code>, confirm the exact interface name, and confirm you can ping the robot on it. This one detail accounts for a remarkable share of lost first sessions.
+  </div>
+
+  <h2 class="part-divider" id="partII">Part II — Talking to It</h2>
+
+  <h2 class="chap" id="ch3">The SDK &amp; DDS Interface <span class="n">— Chapter 3</span></h2>
+  <p class="intro">The G1 speaks DDS — the same middleware ROS 2 runs on, used directly, without ROS. Once that clicks, the whole SDK stops looking like a vendor API and starts looking like a graph you can inspect.</p>
+
+  <h3>The model</h3>
+  <p>The robot continuously <strong>publishes</strong> its state to named topics and <strong>subscribes</strong> to topics carrying commands. Your program joins that conversation as another participant. There is no connection to open and no session to manage &mdash; you announce yourself on the network and start publishing or subscribing, exactly as in <a class="xref" href="ROS2_Field_Guide.html#ch3">the ROS 2 topics chapter</a>.</p>
+  <p>The topics you'll meet most:</p>
+  <table>
+    <tr><th>Topic</th><th>Type</th><th>Direction</th><th>Carries</th></tr>
+    <tr><td><code>rt/lowstate</code></td><td><code>LowState_</code></td><td>robot &rarr; you</td><td>Every joint's position, velocity, torque; IMU; battery</td></tr>
+    <tr><td><code>rt/lowcmd</code></td><td><code>LowCmd_</code></td><td>you &rarr; robot</td><td>Per-motor commands. Full authority — the dangerous one</td></tr>
+    <tr><td><code>rt/arm_sdk</code></td><td><code>LowCmd_</code></td><td>you &rarr; robot</td><td>Upper body only, while locomotion keeps balance</td></tr>
+    <tr><td><code>rt/sportmodestate</code></td><td>state msg</td><td>robot &rarr; you</td><td>High-level body state — pose, velocity, gait</td></tr>
+  </table>
+  <p>Message types come from the <code>unitree_hg</code> package for the G1 (the quadrupeds use <code>unitree_go</code> &mdash; a common source of confusion when adapting example code between platforms).</p>
+
+  <h3>Installing the Python SDK</h3>
+  <pre><code>cd ~
+git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
+cd unitree_sdk2_python
+pip3 install -e .</code></pre>
+  <p>The dependency that causes trouble is <strong>cyclonedds, pinned to 0.10.2</strong>. If the install fails complaining about a cyclonedds path, build it yourself and point the SDK at it:</p>
+  <pre><code>cd ~
+git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+cd cyclonedds &amp;&amp; mkdir build install &amp;&amp; cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=../install
+cmake --build . --target install
+
+export CYCLONEDDS_HOME=~/cyclonedds/install
+cd ~/unitree_sdk2_python &amp;&amp; pip3 install -e .</code></pre>
+  <p>Put that <code>export</code> in your shell profile, or you'll rediscover it every new terminal. The <a class="xref" href="Robotics_Installation_Field_Guide.html#ch5">Robotics Installation Guide</a> walks through this in order with the surrounding setup.</p>
+
+  <h3>The shape of every SDK program</h3>
+  <pre><code>from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelSubscriber
+
+# 1. Initialize the channel factory with the interface facing the robot
+ChannelFactoryInitialize(0, "enp2s0")
+
+# 2. Subscribe to what you care about, or publish commands
+sub = ChannelSubscriber("rt/lowstate", LowState_)
+sub.Init(handler, 10)</code></pre>
+  <p>Every program starts with <code>ChannelFactoryInitialize</code>. The first argument is the DDS domain (0 unless your lab has partitioned things); the second is the interface name from <a class="xref" href="#ch2">Chapter 2</a>. Get the second argument wrong and you get the silent-nothing failure described there.</p>
+
+  <div class="box cmd">
+    <span class="h">Try it — read state, command nothing (safe)</span>
+    <pre><code># Pure read-only. The robot does not move. Run this first, always.
+import time
+from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelSubscriber
+from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_
+
+def on_state(msg):
+    imu = msg.imu_state
+    print(f"rpy={[round(v, 3) for v in imu.rpy]}  "
+          f"joint0 q={msg.motor_state[0].q:+.3f}  "
+          f"temp={msg.motor_state[0].temperature}")
+
+ChannelFactoryInitialize(0, "enp2s0")        # <- YOUR interface name
+sub = ChannelSubscriber("rt/lowstate", LowState_)
+sub.Init(on_state, 10)
+
+while True:
+    time.sleep(1.0)</code></pre>
+    This is the right first program on any robot: <strong>subscribe before you publish.</strong> If you can see live joint angles changing as you gently move a limb by hand, your network, interface name, SDK install, and DDS domain are all correct &mdash; and you've verified all of it without the robot moving under power. If you see nothing, stop here and fix it; nothing downstream will work.
+  </div>
+
+  <div class="box field">
+    <span class="h">From the field — the graph is inspectable, so inspect it</span>
+    Because the G1 speaks standard DDS rather than a proprietary protocol, it is far more transparent than most vendor hardware, and students consistently under-exploit that. You can subscribe to any topic from a second program without touching the first. You can log <code>rt/lowstate</code> for a whole session and analyse it afterwards on a laptop. You can watch what the official example scripts are actually publishing while they run, which is the fastest way to understand an SDK whose documentation assumes you already do. When something isn't behaving, the productive move is almost never to read the SDK source harder &mdash; it's to subscribe to the relevant topic and look at what is genuinely on the wire. The same instinct as <code>ros2 topic echo</code>, and it works here for the same reason: underneath, it's the same protocol.
+  </div>
+
+  <h2 class="chap" id="ch4">High-Level Control <span class="n">— Chapter 4</span></h2>
+  <p class="intro">High-level control is asking the robot to do something and letting its own controller work out how. It is the safe way to make the G1 move, and it should be your default.</p>
+
+  <h3>The clients</h3>
+  <p>The SDK wraps common capabilities in client classes rather than making you construct messages:</p>
+  <table>
+    <tr><th>Client</th><th>Does</th></tr>
+    <tr><td><strong>LocoClient</strong></td><td>Locomotion — stand, sit, damp, set walking velocity, adjust stance height</td></tr>
+    <tr><td><strong>AudioClient</strong></td><td>Speech synthesis, volume, and the chest LED (<a class="xref" href="#ch7">Chapter 7</a>)</td></tr>
+    <tr><td><strong>MotionSwitcherClient</strong></td><td>Switch or release the active motion-control mode</td></tr>
+  </table>
+
+  <pre><code>from unitree_sdk2py.core.channel import ChannelFactoryInitialize
+from unitree_sdk2py.g1.loco.g1_loco_client import LocoClient
+
+ChannelFactoryInitialize(0, "enp2s0")
+loco = LocoClient()
+loco.SetTimeout(10.0)
+loco.Init()
+
+loco.Damp()                    # compliant — the safe resting state
+loco.StandUp()                 # stand
+loco.Move(0.2, 0.0, 0.0)       # vx, vy, vyaw — walk forward slowly
+loco.StopMove()                # stop
+loco.Damp()                    # back to safe</code></pre>
+
+  <h3>Velocity commands are continuous</h3>
+  <p><code>Move()</code> sets a target velocity; it does not travel a distance. The robot keeps walking until you tell it otherwise, which has two implications worth internalizing. First, <strong>you must call <code>StopMove()</code></strong> &mdash; a script that exits without stopping leaves a walking robot behind. Second, if your program crashes mid-walk, the last command stands. Wrap movement in <code>try/finally</code> so that stopping and damping happen even when something throws:</p>
+  <pre><code>try:
+    loco.Move(0.2, 0.0, 0.0)
+    time.sleep(3.0)
+finally:
+    loco.StopMove()
+    loco.Damp()</code></pre>
+  <p>That pattern is not defensive over-engineering. It is the difference between a bug being an error message and a bug being a robot walking into a wall.</p>
+
+  <h3>The state machine</h3>
+  <p>The G1 moves through modes &mdash; damping, standing, locomotion &mdash; and commands are only valid in some of them. Asking it to walk while it's sitting does nothing useful. Follow the sequence: damp &rarr; stand &rarr; move &rarr; stop &rarr; damp. Most "the command is being ignored" reports are a mode problem, not a code problem, and checking <code>rt/sportmodestate</code> will tell you which mode the robot actually believes it is in.</p>
+
+  <h2 class="chap" id="ch5">Low-Level Control <span class="n">— Chapter 5</span></h2>
+  <p class="intro">Low-level control means commanding individual motors directly. It is where the interesting work is — and it is the part of this book to treat most carefully, because the robot's own safety logic is no longer between you and the hardware.</p>
+
+  <div class="box warn">
+    <span class="h">Stand-mounted only, until you have a reason otherwise</span>
+    Publishing to <code>rt/lowcmd</code> takes authority over the motors. A sign error, a too-high gain, or a command sent while the robot believes it is balancing produces violent motion, and the robot will not stop you. <strong>Suspend the G1 on its stand for all low-level work</strong>, keep gains low, and move one joint at a time until you have seen the result with your own eyes. This is the chapter where the safety habits in the front matter stop being abstract.
+  </div>
+
+  <h3>The PD control model</h3>
+  <p>Each motor command carries five fields, and understanding them is understanding low-level control:</p>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td><code>q</code></td><td>Target joint position, in radians</td></tr>
+    <tr><td><code>dq</code></td><td>Target joint velocity</td></tr>
+    <tr><td><code>kp</code></td><td>Position gain — stiffness. How hard it pulls toward <code>q</code></td></tr>
+    <tr><td><code>kd</code></td><td>Velocity gain — damping. How much it resists motion</td></tr>
+    <tr><td><code>tau</code></td><td>Feed-forward torque, added directly</td></tr>
+  </table>
+  <p>The motor computes roughly <code>torque = kp&times;(q_target &minus; q_actual) + kd&times;(dq_target &minus; dq_actual) + tau</code>. Two intuitions follow. <strong>High <code>kp</code> is stiff</strong> &mdash; it holds position hard and fights anything that pushes it, including you. <strong>High <code>kd</code> is damped</strong> &mdash; it resists fast motion, which smooths things out. Low <code>kp</code> with moderate <code>kd</code> gives you a compliant limb that can be pushed around: safe, and the right place to start.</p>
+
+  <h3>Ramp, don't jump</h3>
+  <p>The most common beginner mistake in low-level control is commanding a target far from the joint's current position with a high gain. The motor sees a large error and applies large torque immediately &mdash; the limb snaps to the target, and the resulting shock loads the gearbox and can damage it. Real controllers <strong>interpolate</strong>: read the current position, then move the target there gradually over a second or more.</p>
+  <pre><code># Read where the joint IS, then ramp to where you want it
+start_q = current_state.motor_state[JOINT].q
+target_q = start_q + 0.20            # ~11 degrees — a small move
+
+steps = 200                          # over 2 seconds at 100 Hz
+for i in range(steps):
+    alpha = (i + 1) / steps          # 0 -> 1
+    cmd.motor_cmd[JOINT].q  = start_q + alpha * (target_q - start_q)
+    cmd.motor_cmd[JOINT].dq = 0.0
+    cmd.motor_cmd[JOINT].kp = 30.0   # start LOW
+    cmd.motor_cmd[JOINT].kd = 1.0
+    cmd.motor_cmd[JOINT].tau = 0.0
+    publisher.Write(cmd)
+    time.sleep(0.01)</code></pre>
+  <p>Always read the current position before your first command, and always start from it. A control loop that begins by commanding a position it hasn't checked is the one that breaks things.</p>
+
+  <h3>arm_sdk — the safer middle ground</h3>
+  <p>For upper-body work there is a genuinely useful compromise. Publishing to <strong><code>rt/arm_sdk</code></strong> gives you low-level control of the arms and waist <em>while the locomotion controller keeps the legs balancing</em>. You get direct joint control where you want it without taking responsibility for keeping the robot upright.</p>
+  <p>It uses a distinctive mechanism worth knowing about: <strong><code>motor_cmd[29].q</code> is not a joint</strong> &mdash; index 29 doesn't correspond to any physical motor. Its <code>q</code> value acts as a <strong>weight</strong>, blending between the robot's own control and yours. Ramp it from 0 to 1 to take authority smoothly, and ramp it back down to hand control back. Setting it abruptly to 1 hands you full authority instantly, which produces exactly the jump this chapter warns about.</p>
+
+  <h3>Publish continuously</h3>
+  <p>Low-level control is a <em>loop</em>, not a one-shot command. You publish at a steady rate &mdash; commonly a few hundred Hz &mdash; and the robot expects that stream to continue. Stop publishing and it will typically fall back to a safe state, which is correct behaviour but can itself be abrupt. Keep your loop timing steady, and never do slow work inside it: a file write or a network call in a control loop causes timing jitter that shows up as visible mechanical judder.</p>
+
+  <h2 class="chap" id="ch6">Joints &amp; Indexing <span class="n">— Chapter 6</span></h2>
+  <p class="intro">Joints are addressed by integer index, which means an off-by-one error doesn't produce an exception — it moves the wrong limb. This chapter is about not doing that.</p>
+
+  <h3>The layout</h3>
+  <p>Indices run roughly from the legs upward: left leg, right leg, waist, left arm, right arm. On a 29-DoF G1 that's twelve leg joints (six per leg: hip pitch/roll/yaw, knee, ankle pitch/roll), waist joints, and seven per arm (shoulder pitch/roll/yaw, elbow, wrist roll/pitch/yaw). The 23-DoF variant locks the waist and simplifies the wrists, which shifts the indices of everything above the legs.</p>
+
+  <div class="box warn">
+    <span class="h">Do not hardcode indices from a tutorial</span>
+    <strong>Joint indices differ between the 23-DoF and 29-DoF variants, and between firmware generations.</strong> Copying an index from a blog post, a paper, or another lab's code is how you command a shoulder while intending an elbow. Get the mapping from the enum shipped with <em>your</em> SDK version, use the named constants rather than raw integers, and verify empirically before you rely on it &mdash; the exercise below takes two minutes and removes the whole category of error.
+  </div>
+
+  <div class="box cmd">
+    <span class="h">Try it — verify the map yourself (read-only, safe)</span>
+    <pre><code># Robot on its stand, powered, damped. Nothing is commanded.
+# Subscribe to rt/lowstate, then move ONE joint by hand and watch which
+# index changes. Repeat for every joint you intend to command.
+
+def on_state(msg):
+    moved = [(i, m.q) for i, m in enumerate(msg.motor_state) if abs(m.dq) > 0.05]
+    if moved:
+        print("moving:", [(i, round(q, 3)) for i, q in moved])</code></pre>
+    Write the mapping down for <em>your</em> robot and keep it with the project. Ten minutes here saves an afternoon and possibly a gearbox &mdash; and it makes the joint limits real to you, because you feel where each one stops.
+  </div>
+
+  <h3>Limits, signs, and units</h3>
+  <ul>
+    <li><strong>Radians, always.</strong> The SDK does not speak degrees. Most large-motion errors are a forgotten <code>math.radians()</code>.</li>
+    <li><strong>Every joint has limits</strong>, and commanding past them means the motor pushes against a hard stop &mdash; drawing current, heating, and stressing the gearbox. Clamp your targets in software.</li>
+    <li><strong>Sign conventions are per-joint</strong> and not always intuitive. Verify empirically rather than assuming; positive is not reliably "up" or "forward".</li>
+    <li><strong>Watch <code>temperature</code> in <code>motor_state</code>.</strong> A joint fighting a limit or holding a heavy pose heats up, and thermal derating will quietly change the robot's behaviour before anything errors.</li>
+  </ul>
+
+  <h2 class="part-divider" id="partIII">Part III — Building On It</h2>
+
+  <h2 class="chap" id="ch7">Audio, Voice &amp; the LED <span class="n">— Chapter 7</span></h2>
+  <p class="intro">The G1 has a microphone array, a speaker, and a programmable chest LED. This is the fastest path to a robot that visibly does something, which makes it excellent early-project territory.</p>
+
+  <h3>AudioClient</h3>
+  <pre><code>from unitree_sdk2py.core.channel import ChannelFactoryInitialize
+from unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+
+ChannelFactoryInitialize(0, "enp2s0")
+audio = AudioClient()
+audio.SetTimeout(10.0)
+audio.Init()
+
+audio.SetVolume(60)
+audio.TtsMaker("Hello. I am a G1 humanoid robot.", 0)
+audio.LedControl(0, 255, 100)         # R, G, B</code></pre>
+  <p>The LED is genuinely useful beyond decoration: as a state indicator it tells you what your program is doing without looking at a terminal &mdash; green while listening, amber while thinking, red on error. On a robot you're standing next to rather than sitting in front of, that is real feedback.</p>
+
+  <h3>Building a conversation loop</h3>
+  <p>A talking robot is a <strong>pipeline</strong>, and thinking of it that way is what makes it debuggable: microphone &rarr; speech recognition (ASR) &rarr; language model &rarr; text-to-speech &rarr; speaker. Each stage has its own latency and its own failure mode, and the total delay is the sum of all of them &mdash; which is why a naive implementation feels sluggish even when every individual piece is fine.</p>
+  <p>Two things matter for making it feel responsive. <strong>Instrument every stage</strong> &mdash; log the time each takes, so when it feels slow you know which stage to attack rather than guessing. And <strong>don't block</strong>: run the pipeline asynchronously so the robot can still respond to other events while it's waiting on a model API, or the whole robot freezes mid-sentence. That async structure is also what lets you interrupt a reply when someone starts talking again.</p>
+
+  <h2 class="chap" id="ch8">Reading Sensors <span class="n">— Chapter 8</span></h2>
+  <p class="intro">Everything the robot knows about itself arrives on rt/lowstate at high rate. Learning to read it well is most of what debugging a robot consists of.</p>
+
+  <h3>What's in LowState_</h3>
+  <table>
+    <tr><th>Field</th><th>Contains</th></tr>
+    <tr><td><code>motor_state[i].q</code></td><td>Actual joint position (radians)</td></tr>
+    <tr><td><code>motor_state[i].dq</code></td><td>Actual joint velocity</td></tr>
+    <tr><td><code>motor_state[i].tau_est</code></td><td>Estimated torque — what the joint is working against</td></tr>
+    <tr><td><code>motor_state[i].temperature</code></td><td>Motor temperature. Watch it during sustained poses</td></tr>
+    <tr><td><code>imu_state.rpy</code></td><td>Roll, pitch, yaw — body orientation</td></tr>
+    <tr><td><code>imu_state.gyroscope</code></td><td>Angular velocity</td></tr>
+    <tr><td><code>imu_state.accelerometer</code></td><td>Linear acceleration</td></tr>
+    <tr><td><code>power_v</code> / <code>power_a</code></td><td>Battery voltage and current draw</td></tr>
+  </table>
+
+  <h3>Commanded is not actual</h3>
+  <p>This is the single most useful diagnostic idea on any robot. You commanded <code>q</code>; the robot reports a different <code>q</code>. That gap &mdash; <strong>tracking error</strong> &mdash; tells you something real:</p>
+  <ul>
+    <li><strong>Small, steady error</strong> &mdash; normal. Gravity, friction, finite gains.</li>
+    <li><strong>Large error with high <code>tau_est</code></strong> &mdash; the joint is pushing hard and not getting there. Something is in the way, or you've commanded past a limit.</li>
+    <li><strong>Error growing over time with rising temperature</strong> &mdash; thermal derating. The motor is protecting itself and its available torque is dropping.</li>
+    <li><strong>Actual doesn't move at all</strong> &mdash; gains too low, wrong index, or you're not actually publishing (<a class="xref" href="#ch11">Chapter 11</a>).</li>
+  </ul>
+  <p>Log both commanded and actual for every joint you drive. When something behaves oddly, that pair of traces usually contains the answer, and no amount of reading your control code will substitute for it.</p>
+
+  <h3>Log everything, always</h3>
+  <p>Write <code>rt/lowstate</code> to disk for every hardware session, timestamped. Robot time is expensive and shared; a session you recorded can be analysed all week on a laptop, and the interesting failure &mdash; the one that happened once, right before the demo &mdash; is only debuggable if you captured it. This is the same argument as <a class="xref" href="ROS2_Field_Guide.html#ch12"><code>ros2 bag</code></a>, and it applies with more force here because you can't re-run a humanoid as cheaply as a simulation.</p>
+
+  <h2 class="chap" id="ch9">Bridging to ROS 2 <span class="n">— Chapter 9</span></h2>
+  <p class="intro">The G1's SDK is not ROS 2 — but because both speak DDS, connecting them is far less work than it would otherwise be.</p>
+
+  <h3>Why a bridge is even possible</h3>
+  <p>As <a class="xref" href="ROS2_Field_Guide.html#ch10">the ROS 2 DDS chapter</a> explains, ROS 2 topics <em>are</em> DDS topics with a naming convention layered on. The G1 publishes DDS topics directly. So both are already on the same wire protocol, and bridging is a matter of message-definition translation rather than protocol translation. Unitree's <code>unitree_ros2</code> package does exactly this.</p>
+
+  <h3>Setting it up</h3>
+  <p>The bridge needs CycloneDDS configured to use the interface facing the robot, which is done through environment variables and an XML config:</p>
+  <pre><code>export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///path/to/cyclonedds.xml
+
+# The config names the interface — the same one from Chapter 2
+# &lt;CycloneDDS&gt;&lt;Domain&gt;&lt;General&gt;&lt;Interfaces&gt;
+#   &lt;NetworkInterface name="enp2s0" priority="default" multicast="default" /&gt;
+# &lt;/Interfaces&gt;&lt;/General&gt;&lt;/Domain&gt;&lt;/CycloneDDS&gt;
+
+source ~/unitree_ros2/setup.sh          # robot-facing interface
+source ~/unitree_ros2/setup_local.sh    # loopback, for testing without a robot</code></pre>
+  <p>Once sourced, the G1's topics appear to <code>ros2 topic list</code> and the entire ROS 2 toolkit applies &mdash; <code>echo</code>, <code>hz</code>, <code>bag record</code>, rviz2. That is a substantial practical win: you get mature tooling over a vendor interface for the cost of some configuration.</p>
+
+  <h3>When to bridge and when not to</h3>
+  <table>
+    <tr><th>Use the raw SDK when</th><th>Bridge to ROS 2 when</th></tr>
+    <tr><td>Writing tight control loops — fewer layers, less latency</td><td>You want rviz2, rqt, or <code>ros2 bag</code></td></tr>
+    <tr><td>Following Unitree's examples directly</td><td>Integrating existing ROS 2 packages (Nav2, MoveIt, perception)</td></tr>
+    <tr><td>Minimal dependencies on the onboard computer</td><td>Your team already works in ROS 2</td></tr>
+    <tr><td>Learning what's actually on the wire</td><td>You need the ecosystem more than the last millisecond</td></tr>
+  </table>
+  <p>For a first course, the raw SDK is usually the better teacher &mdash; it makes the pub/sub model concrete without a framework in the way. Bridge when you want something from the ROS 2 ecosystem specifically.</p>
+
+  <h2 class="chap" id="ch10">Simulate Before You Deploy <span class="n">— Chapter 10</span></h2>
+  <p class="intro">Simulation is not a lesser version of hardware work. It is where you find the sign errors, the index mistakes, and the unstable gains — cheaply, repeatably, and without anything breaking.</p>
+
+  <h3>What sim is genuinely good for</h3>
+  <ul>
+    <li><strong>Catching the violent bugs safely.</strong> A wrong sign is a funny video in sim and a broken gearbox on hardware.</li>
+    <li><strong>Iterating without booking the robot.</strong> The G1 is shared, needs charging, and is often unavailable. Your laptop is not.</li>
+    <li><strong>Perfect repeatability.</strong> Same initial conditions every run, which hardware can never give you.</li>
+    <li><strong>Generating training data at scale</strong> &mdash; thousands of episodes for learned policies, far beyond what you could collect physically.</li>
+  </ul>
+
+  <h3>The options</h3>
+  <table>
+    <tr><th>Tool</th><th>Notes</th></tr>
+    <tr><td><strong>MuJoCo</strong></td><td>Fast, accurate contact physics. The standard for humanoid research. G1 models are available</td></tr>
+    <tr><td><strong>Lucky Engine</strong></td><td>MuJoCo physics with a game-engine editor and rendering; supports the G1 (<a class="xref" href="Lucky_Robots_Field_Guide.html#ch1">Lucky Robots guide</a>)</td></tr>
+    <tr><td><strong>Isaac Sim</strong></td><td>GPU-accelerated, photorealistic. Heavy; needs a serious NVIDIA GPU</td></tr>
+    <tr><td><strong>Gazebo</strong></td><td>The long-standing ROS-native simulator. Well integrated, less accurate contact</td></tr>
+  </table>
+
+  <h3>The reality gap</h3>
+  <p>Sim is not reality and pretending otherwise causes its own failures. Real actuators have backlash, friction, and delay; real sensors have noise and latency; real contact is messier than any model. A controller tuned to perfection in simulation will typically need retuning on hardware, and a policy trained only on clean simulated data often fails on the real robot. This is the <strong>sim-to-real gap</strong>, and the standard mitigations are domain randomization (train across randomized physics so the policy can't overfit to one exact model) and system identification (measure the real robot's parameters and feed them back into the model). Neither closes the gap entirely. Treat simulation as the place you eliminate the bugs that would hurt, not as proof that something works.</p>
+
+  <h2 class="part-divider" id="partIV">Part IV — Practice &amp; Reference</h2>
+
+  <h2 class="chap" id="ch11">Troubleshooting <span class="n">— Chapter 11</span></h2>
+  <p class="intro">Robot problems are usually network problems, mode problems, or index problems — in that order of frequency.</p>
+
+  <h3>Work outward from the wire</h3>
+  <pre><code>ip link show                          # 1. what interfaces exist?
+ping -c 3 192.168.123.161             # 2. can I reach the robot at all?
+ssh unitree@192.168.123.164           # 3. can I get onboard?
+# 4. run the read-only subscriber from Chapter 3 — is state arriving?</code></pre>
+  <p>Do not debug your control code until step 4 produces live data. Almost everything that looks like an SDK problem is a failure at step 1 or 2.</p>
+
+  <h3>The table</h3>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td>Script runs, prints nothing, no error</td><td>Wrong interface name in <code>ChannelFactoryInitialize</code></td><td><code>ip link show</code>; use the exact name (<a class="xref" href="#ch2">Ch 2</a>)</td></tr>
+    <tr><td>Can't ping the robot</td><td>No static IP set — there's no DHCP</td><td>Set an address on 192.168.123.0/24</td></tr>
+    <tr><td>SDK install fails on cyclonedds</td><td>Needs cyclonedds 0.10.2</td><td>Build it, set <code>CYCLONEDDS_HOME</code> (<a class="xref" href="#ch3">Ch 3</a>)</td></tr>
+    <tr><td><code>import unitree_sdk2py</code> fails</td><td>Installed into a different environment</td><td>Check <code>sys.executable</code> — <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Python_Environment_Field_Guide.html#ch3">Python guide, Ch 3</a></td></tr>
+    <tr><td>Commands ignored, no error</td><td>Robot is in a mode that doesn't accept them</td><td>Follow damp &rarr; stand &rarr; move; check <code>rt/sportmodestate</code></td></tr>
+    <tr><td>Wrong limb moves</td><td>Joint index mismatch for your variant</td><td>Verify the map empirically (<a class="xref" href="#ch6">Ch 6</a>)</td></tr>
+    <tr><td>Joint snaps violently to target</td><td>Large step command with high <code>kp</code></td><td>Read current position, ramp from it (<a class="xref" href="#ch5">Ch 5</a>)</td></tr>
+    <tr><td>Motion is juddery</td><td>Slow work inside the control loop</td><td>Move logging and I/O out of the loop</td></tr>
+    <tr><td>Robot sags and stops responding</td><td>Command stream stopped; fell back to safe state</td><td>Keep publishing continuously (<a class="xref" href="#ch5">Ch 5</a>)</td></tr>
+    <tr><td>Joint gets weak over a session</td><td>Thermal derating</td><td>Watch <code>temperature</code>; let it cool; lower gains</td></tr>
+    <tr><td>Works alone, fails with a classmate</td><td>Two DDS participants on one subnet</td><td>Separate domains, or take turns</td></tr>
+    <tr><td>Arm control fights the balance controller</td><td>Using <code>rt/lowcmd</code> where <code>rt/arm_sdk</code> was wanted</td><td>Use arm_sdk with the index-29 weight ramp</td></tr>
+  </table>
+
+  <h2 class="chap" id="ch12">Lab Exercises <span class="n">— Chapter 12</span></h2>
+  <p class="intro">In order. Labs 1–3 don't move the robot at all; do not skip ahead to the ones that do.</p>
+
+  <h3>Lab 1 — Connect and observe (no motion)</h3>
+  <ol>
+    <li>Set a static IP, confirm you can ping the locomotion computer, and SSH to the development computer.</li>
+    <li>Run the read-only subscriber from <a class="xref" href="#ch3">Chapter 3</a>. Confirm live state arrives.</li>
+    <li>Gently move one arm by hand (robot damped, on its stand). Watch <code>q</code> change in your output.</li>
+    <li>Print the IMU's roll/pitch/yaw and tilt the robot slightly. Does the sign match your expectation?</li>
+  </ol>
+
+  <h3>Lab 2 — Map the joints (no motion under power)</h3>
+  <ol>
+    <li>Using the technique in <a class="xref" href="#ch6">Chapter 6</a>, move each joint by hand and record which index responds.</li>
+    <li>Produce a table of index &rarr; joint name &rarr; observed range for your robot. Note the sign convention for each.</li>
+    <li>Compare against the SDK's enum. Where they differ, work out why.</li>
+    <li>Commit this table to your project repo. It's reference data your whole team needs.</li>
+  </ol>
+
+  <h3>Lab 3 — Log a session</h3>
+  <ol>
+    <li>Write a logger that records all joint positions, velocities, torques, and temperatures with timestamps.</li>
+    <li>Record two minutes while a classmate poses the robot by hand.</li>
+    <li>Plot one joint's position and estimated torque over time with matplotlib.</li>
+    <li>Identify from the plot alone when the joint was being pushed against.</li>
+  </ol>
+
+  <h3>Lab 4 — Speak and signal</h3>
+  <ol>
+    <li>Use AudioClient to make the robot say your name.</li>
+    <li>Set the chest LED to three different colours in sequence.</li>
+    <li>Combine them: LED green while listening, amber while processing, back to green when done.</li>
+    <li>Measure the latency of the TTS call and record it. Where does the time actually go?</li>
+  </ol>
+
+  <h3>Lab 5 — One joint, carefully <span style="color:var(--red)">(robot on stand, supervised)</span></h3>
+  <ol>
+    <li>Complete the <a class="xref" href="#appB">pre-flight checklist</a>. Robot suspended, E-stop in reach, second person watching.</li>
+    <li>Read the current position of one arm joint. Ramp it 0.1 rad over two seconds with <code>kp=20</code>, <code>kd=1</code>.</li>
+    <li>Log commanded vs actual. Plot both. Explain the tracking error.</li>
+    <li>Repeat with <code>kp=60</code>. What changed, and what does that tell you about stiffness?</li>
+    <li>Return to damping. Confirm the joint is compliant again by hand.</li>
+  </ol>
+
+  <h3>Lab 6 — Simulate first</h3>
+  <ol>
+    <li>Load a G1 model in MuJoCo or Lucky Engine (<a class="xref" href="Lucky_Robots_Field_Guide.html#ch4">Lucky Robots guide</a>).</li>
+    <li>Port your Lab 5 controller to run against the simulated robot.</li>
+    <li>Deliberately flip the sign of your target. Watch what happens in sim &mdash; and note what that would have done on hardware.</li>
+    <li>Compare simulated tracking error with the hardware trace from Lab 5. Where does the gap come from?</li>
+  </ol>
+
+  <h2 class="chap" id="ch13">Glossary <span class="n">— Chapter 13</span></h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><strong>DoF</strong></td><td>Degree of freedom — one independent way a joint can move.</td></tr>
+    <tr><td><strong>Locomotion computer</strong></td><td>The onboard system running the balance controller. Not user-accessible.</td></tr>
+    <tr><td><strong>Development computer</strong></td><td>The onboard system your code runs on.</td></tr>
+    <tr><td><strong>DDS</strong></td><td>The pub/sub middleware the SDK speaks. Same protocol layer as ROS 2.</td></tr>
+    <tr><td><strong>CycloneDDS</strong></td><td>The specific DDS implementation the SDK uses. Version-sensitive.</td></tr>
+    <tr><td><strong>Channel factory</strong></td><td>SDK object bound to a network interface; the entry point to every program.</td></tr>
+    <tr><td><strong>rt/lowstate</strong></td><td>Topic carrying full robot state at high rate.</td></tr>
+    <tr><td><strong>rt/lowcmd</strong></td><td>Topic for direct per-motor commands. Full authority.</td></tr>
+    <tr><td><strong>rt/arm_sdk</strong></td><td>Upper-body control while locomotion keeps balance.</td></tr>
+    <tr><td><strong>High-level control</strong></td><td>Asking the robot to walk or stand; its controller decides how.</td></tr>
+    <tr><td><strong>Low-level control</strong></td><td>Commanding individual motors yourself.</td></tr>
+    <tr><td><strong>kp / kd</strong></td><td>Position and velocity gains — stiffness and damping.</td></tr>
+    <tr><td><strong>tau</strong></td><td>Feed-forward torque added directly to the motor command.</td></tr>
+    <tr><td><strong>Damping state</strong></td><td>Compliant, safe resting mode. Where you return when unsure.</td></tr>
+    <tr><td><strong>Tracking error</strong></td><td>Difference between commanded and actual position. Your best diagnostic.</td></tr>
+    <tr><td><strong>Thermal derating</strong></td><td>Motors reducing available torque as they heat up.</td></tr>
+    <tr><td><strong>IMU</strong></td><td>Inertial measurement unit — the robot's sense of orientation.</td></tr>
+    <tr><td><strong>Sim-to-real gap</strong></td><td>The difference between simulated and physical behaviour.</td></tr>
+    <tr><td><strong>Domain randomization</strong></td><td>Training across randomized physics so a policy transfers better.</td></tr>
+  </table>
+
+  <h2 class="chap" id="appA">Command Cheat-Sheet <span class="n">— Appendix A</span></h2>
+
+  <h3>Network</h3>
+  <pre><code>ip link show                                   # find your interface name
+sudo ip addr add 192.168.123.99/24 dev enp2s0  # set a static address
+sudo ip link set enp2s0 up
+ip addr show enp2s0
+ping -c 3 192.168.123.161                      # locomotion computer
+ssh unitree@192.168.123.164                    # development computer</code></pre>
+
+  <h3>SDK install</h3>
+  <pre><code>git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
+cd unitree_sdk2_python &amp;&amp; pip3 install -e .
+
+# if cyclonedds fails:
+git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+cd cyclonedds &amp;&amp; mkdir build install &amp;&amp; cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=../install &amp;&amp; cmake --build . --target install
+export CYCLONEDDS_HOME=~/cyclonedds/install</code></pre>
+
+  <h3>Every program starts here</h3>
+  <pre><code>from unitree_sdk2py.core.channel import ChannelFactoryInitialize
+ChannelFactoryInitialize(0, "enp2s0")     # domain, interface</code></pre>
+
+  <h3>High-level</h3>
+  <pre><code>loco = LocoClient(); loco.SetTimeout(10.0); loco.Init()
+loco.Damp()                     # safe resting state
+loco.StandUp()
+loco.Move(vx, vy, vyaw)         # continuous velocity
+loco.StopMove()                 # ALWAYS — wrap in try/finally
+
+audio = AudioClient(); audio.SetTimeout(10.0); audio.Init()
+audio.SetVolume(60)
+audio.TtsMaker("text", 0)
+audio.LedControl(r, g, b)</code></pre>
+
+  <h3>Low-level fields</h3>
+  <pre><code>cmd.motor_cmd[i].q    = target_radians    # read current first, then ramp
+cmd.motor_cmd[i].dq   = 0.0
+cmd.motor_cmd[i].kp   = 30.0              # stiffness — start LOW
+cmd.motor_cmd[i].kd   = 1.0               # damping
+cmd.motor_cmd[i].tau  = 0.0               # feed-forward torque
+
+cmd.motor_cmd[29].q   = weight            # arm_sdk only: 0->1 authority ramp</code></pre>
+
+  <h3>State fields</h3>
+  <pre><code>msg.motor_state[i].q            # actual position
+msg.motor_state[i].dq           # actual velocity
+msg.motor_state[i].tau_est      # estimated torque
+msg.motor_state[i].temperature  # watch this
+msg.imu_state.rpy               # roll, pitch, yaw
+msg.power_v / msg.power_a       # battery</code></pre>
+
+  <h3>ROS 2 bridge</h3>
+  <pre><code>export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///path/to/cyclonedds.xml
+source ~/unitree_ros2/setup.sh          # robot interface
+source ~/unitree_ros2/setup_local.sh    # loopback testing
+ros2 topic list</code></pre>
+
+  <h2 class="chap" id="appB">Pre-Flight Checklist <span class="n">— Appendix B</span></h2>
+  <p class="intro">Print this. Run it before every session that moves the robot. It takes ninety seconds and it is the cheapest insurance in the lab.</p>
+
+  <h3>Before power-on</h3>
+  <ul>
+    <li>&#9744; Robot is <strong>suspended on its stand</strong> (mandatory for any low-level work)</li>
+    <li>&#9744; The full volume the arms and legs can reach is <strong>clear</strong> — people, laptops, cables</li>
+    <li>&#9744; <strong>E-stop located</strong> and physically within reach of the person watching</li>
+    <li>&#9744; <strong>Two people present</strong> — one driving, one watching</li>
+    <li>&#9744; Battery charge is adequate for the session</li>
+    <li>&#9744; Nothing is resting on the robot</li>
+  </ul>
+
+  <h3>Before the first command</h3>
+  <ul>
+    <li>&#9744; Static IP set; <code>ping</code> to the robot succeeds</li>
+    <li>&#9744; Interface name in your script matches <code>ip link show</code> exactly</li>
+    <li>&#9744; <strong>Read-only subscriber run first</strong> — live state is arriving</li>
+    <li>&#9744; Joint indices verified against <em>this</em> robot, not a tutorial</li>
+    <li>&#9744; Targets clamped to joint limits in software</li>
+    <li>&#9744; Gains start low (<code>kp</code> ~20&ndash;30), first motion is small</li>
+    <li>&#9744; Control loop reads current position before commanding</li>
+    <li>&#9744; <code>try/finally</code> guarantees stop and damp on any exception</li>
+    <li>&#9744; Logging is running</li>
+  </ul>
+
+  <h3>Before every single run</h3>
+  <ul>
+    <li>&#9744; <strong>Say out loud what you expect the robot to do.</strong> If you can't, don't run it</li>
+    <li>&#9744; The watcher knows a run is starting and has a hand near the stop</li>
+    <li>&#9744; You know what changed since the last run</li>
+  </ul>
+
+  <h3>Ending a session</h3>
+  <ul>
+    <li>&#9744; Robot returned to <strong>damping</strong>, then powered down properly</li>
+    <li>&#9744; Logs saved and named meaningfully</li>
+    <li>&#9744; Anything that behaved unexpectedly written down while you still remember it</li>
+    <li>&#9744; Battery on charge</li>
+  </ul>
+
+  <div class="box field">
+    <span class="h">From the field — the habits that separate good labs from expensive ones</span>
+    Everything in this book reduces to four habits, and they are worth more than any amount of SDK knowledge. <strong>Subscribe before you publish</strong> &mdash; prove you can read the robot before you try to move it, because that single step validates your network, interface, install, and domain at zero risk. <strong>Read the current position before you command one</strong> &mdash; the controller that assumes where a joint is, is the one that breaks a gearbox. <strong>Log every session</strong> &mdash; hardware time is the scarce resource and unrecorded failures are unfixable failures. <strong>And return to damping when you're unsure</strong> &mdash; not as a last resort, but as the default state you leave the robot in whenever you stop to think. None of these is clever, and none is optional. The labs where robots stay working for years are not staffed by more careful people than yours; they just do these four things without deciding to each time.
+  </div>
+
+  <hr>
+  <div class="box field">
+    <span class="h">A closing word</span>
+    The G1 is an unusual teaching platform because the gap between "reading about robotics" and "commanding a humanoid's shoulder joint" is about forty lines of Python. That accessibility is genuinely new, and it's why this class of machine is showing up in undergraduate labs at all. It also means the responsibility arrives much earlier than it used to &mdash; you will have real authority over real hardware in your first week, before you have the instincts that normally accompany it. That's what the safety chapter and the checklist are for: they're borrowed instincts, until yours arrive. Work through Parts I and II properly, keep the robot on its stand longer than feels necessary, and log everything. Then go build something that walks.
+  </div>
+
+  <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
+
+</div>
+</div>
+
+<div id="palette" role="dialog" aria-modal="true">
+  <div id="palbox">
+    <input id="palinput" type="text" placeholder="Search the whole book&hellip;" autocomplete="off" spellcheck="false">
+    <div id="palresults"></div>
+    <div id="palhint"><span><b>&uarr;&darr;</b> navigate</span><span><b>&crarr;</b> open</span><span><b>esc</b> close</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement, body=document.body;
+  var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+  var themeBtn=document.getElementById('themebtn');
+  function applyTheme(t){root.setAttribute('data-theme',t);themeBtn.innerHTML=(t==='light')?'&#9728;':'&#9789;';LS.set('g1-theme',t);}
+  applyTheme(LS.get('g1-theme','dark'));
+  themeBtn.addEventListener('click',function(){applyTheme(root.getAttribute('data-theme')==='light'?'dark':'light');});
+
+  var fs=parseInt(LS.get('g1-fs','16'),10);
+  function applyFs(){fs=Math.max(13,Math.min(21,fs));root.style.setProperty('--fs',fs+'px');LS.set('g1-fs',fs);}
+  applyFs();
+  document.getElementById('fsup').addEventListener('click',function(){fs+=1;applyFs();});
+  document.getElementById('fsdown').addEventListener('click',function(){fs-=1;applyFs();});
+
+  var collapsed={};try{collapsed=JSON.parse(LS.get('g1-collapsed','{}'))||{};}catch(e){collapsed={};}
+  [].forEach.call(document.querySelectorAll('.navpart'),function(part){
+    var btn=part.querySelector('button.part');var key=btn.textContent.trim();
+    if(collapsed[key])part.classList.add('collapsed');
+    btn.addEventListener('click',function(){part.classList.toggle('collapsed');collapsed[key]=part.classList.contains('collapsed');LS.set('g1-collapsed',JSON.stringify(collapsed));});
+  });
+
+  var used={};document.querySelectorAll('[id]').forEach(function(el){used[el.id]=true;});
+  function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50);}
+  document.querySelectorAll('.content h3, .content h4').forEach(function(h){if(h.id)return;var base=slug(h.textContent)||'s',id=base,n=2;while(used[id]){id=base+'-'+(n++);}used[id]=true;h.id=id;});
+  document.querySelectorAll('.content h2.chap, .content h3').forEach(function(h){if(!h.id)return;var a=document.createElement('a');a.className='anchor';a.href='#'+h.id;a.textContent='#';a.title='Link to this section';h.appendChild(a);});
+
+  var content=document.querySelector('.content');
+  var heads=[].slice.call(content.querySelectorAll('h2.chap'));
+  function chapTitle(h){var c=h.cloneNode(true);var n=c.querySelector('.n');if(n)n.remove();var a=c.querySelector('.anchor');if(a)a.remove();return c.textContent.trim();}
+  heads.forEach(function(h){var words=0,el=h.nextElementSibling;while(el&&!(el.matches&&el.matches('h2.chap'))){words+=(el.textContent||'').split(/\s+/).length;el=el.nextElementSibling;}
+    if(words>40){var mins=Math.max(1,Math.round(words/200));var rt=document.createElement('div');rt.className='readtime';rt.innerHTML='&#128338; ~'+mins+' min read &middot; '+words.toLocaleString()+' words';if(h.nextSibling)h.parentNode.insertBefore(rt,h.nextSibling);else h.parentNode.appendChild(rt);}});
+
+  function pagerCell(h,dir){if(!h)return '<span class="empty"></span>';return '<a class="'+dir+'" href="#'+h.id+'"><div class="dir">'+(dir==='prev'?'← Previous':'Next →')+'</div><div class="ttl">'+chapTitle(h)+'</div></a>';}
+  heads.forEach(function(h,i){var pager=document.createElement('div');pager.className='pager';pager.innerHTML=pagerCell(heads[i-1],'prev')+pagerCell(heads[i+1],'next');
+    var next=heads[i+1];if(next){var target=next;if(target.previousElementSibling&&target.previousElementSibling.matches&&target.previousElementSibling.matches('h2.part-divider'))target=target.previousElementSibling;content.insertBefore(pager,target);}else{var bt=document.getElementById('backtop');var hr=content.querySelector('hr');content.insertBefore(pager,hr||bt);}});
+
+  document.querySelectorAll('.content pre').forEach(function(pre){var wrap=document.createElement('div');wrap.className='codewrap';pre.parentNode.insertBefore(wrap,pre);wrap.appendChild(pre);var btn=document.createElement('button');btn.className='copybtn';btn.textContent='Copy';wrap.appendChild(btn);
+    btn.addEventListener('click',function(){var txt=pre.innerText;var done=function(){btn.textContent='Copied!';btn.classList.add('done');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('done');},1400);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){fallback(txt);done();});}else{fallback(txt);done();}});});
+  function fallback(txt){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+
+  var navlinks=[].slice.call(document.querySelectorAll('a.navlink'));
+  var readSet={};try{readSet=JSON.parse(LS.get('g1-read','{}'))||{};}catch(e){readSet={};}
+  var readFill=document.getElementById('readfill'),readLabel=document.getElementById('readlabel');
+  function refreshProgress(){var total=navlinks.length,done=0;navlinks.forEach(function(a){if(readSet[a.getAttribute('href')]){a.classList.add('read');done++;}else a.classList.remove('read');});readFill.style.width=(total?Math.round(done/total*100):0)+'%';readLabel.textContent=done+' of '+total+' read';}
+  navlinks.forEach(function(a){var chk=a.querySelector('.check');if(chk)chk.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('g1-read',JSON.stringify(readSet));refreshProgress();});});
+  refreshProgress();
+
+  var navByHref={};navlinks.forEach(function(a){navByHref[a.getAttribute('href')]=a;});
+  var spyTargets=navlinks.map(function(a){var el=document.querySelector(a.getAttribute('href'));return el?{a:a,el:el,id:a.getAttribute('href')}:null;}).filter(Boolean);
+  var crumb=document.getElementById('crumb'),prog=document.getElementById('progress'),backtop=document.getElementById('backtop');var curId=null;
+  function onScroll(){var sc=window.pageYOffset,h=document.documentElement.scrollHeight-window.innerHeight;prog.style.width=(h>0?(sc/h*100):0)+'%';backtop.classList.toggle('show',sc>500);
+    var cur=spyTargets[0];for(var i=0;i<spyTargets.length;i++){if(spyTargets[i].el.getBoundingClientRect().top<=120)cur=spyTargets[i];}
+    if(cur&&cur.id!==curId){curId=cur.id;navlinks.forEach(function(a){a.classList.remove('active');});cur.a.classList.add('active');crumb.innerHTML='<b>'+cur.a.textContent.trim()+'</b>';}}
+  document.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll);window.addEventListener('load',onScroll);onScroll();
+
+  var navsearch=document.getElementById('navsearch');
+  navsearch.addEventListener('input',function(){var q=navsearch.value.trim().toLowerCase();navlinks.forEach(function(a){var hit=a.textContent.toLowerCase().indexOf(q)>=0;a.classList.toggle('hidden',q.length>0&&!hit);});if(q.length>0)document.querySelectorAll('.navpart').forEach(function(p){p.classList.remove('collapsed');});});
+
+  var index=[];
+  document.querySelectorAll('.content h2.chap').forEach(function(h){index.push({id:h.id,text:chapTitle(h),lvl:'Chapter',chap:chapTitle(h)});});
+  (function(){var curChap='';document.querySelectorAll('.content h2.chap, .content h3, .content h4').forEach(function(h){if(h.matches('h2.chap')){curChap=chapTitle(h);return;}var t=h.cloneNode(true);var a=t.querySelector('.anchor');if(a)a.remove();index.push({id:h.id,text:t.textContent.trim(),lvl:(h.tagName==='H3'?'Section':'Topic'),chap:curChap});});})();
+  var palette=document.getElementById('palette'),palinput=document.getElementById('palinput'),palresults=document.getElementById('palresults');var palSel=0,palShown=[];
+  function renderPal(q){q=q.trim().toLowerCase();palShown=!q?index.slice(0,40):index.filter(function(it){return it.text.toLowerCase().indexOf(q)>=0||it.chap.toLowerCase().indexOf(q)>=0;}).slice(0,60);palSel=0;
+    palresults.innerHTML=palShown.length?palShown.map(function(it,i){var ctx=(it.lvl!=='Chapter'&&it.chap)?'<span class="ctx">'+it.chap+'</span>':'';return '<div class="palitem'+(i===0?' sel':'')+'" data-id="'+it.id+'"><span class="lvl">'+it.lvl+'</span><span class="txt">'+it.text+'</span>'+ctx+'</div>';}).join(''):'<div class="palitem"><span class="txt" style="color:var(--faint)">No matches</span></div>';}
+  function openPal(){palette.classList.add('open');palinput.value='';renderPal('');palinput.focus();}
+  function closePal(){palette.classList.remove('open');}
+  function goPal(){var it=palShown[palSel];if(it){closePal();location.hash='#'+it.id;}}
+  document.getElementById('palbtn').addEventListener('click',openPal);
+  palinput.addEventListener('input',function(){renderPal(palinput.value);});
+  palresults.addEventListener('click',function(e){var d=e.target.closest('.palitem');if(d&&d.dataset.id){closePal();location.hash='#'+d.dataset.id;}});
+  palette.addEventListener('click',function(e){if(e.target===palette)closePal();});
+  palinput.addEventListener('keydown',function(e){var items=palresults.querySelectorAll('.palitem');
+    if(e.key==='ArrowDown'){e.preventDefault();palSel=Math.min(palShown.length-1,palSel+1);}else if(e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(0,palSel-1);}else if(e.key==='Enter'){e.preventDefault();goPal();return;}else if(e.key==='Escape'){closePal();return;}else return;
+    items.forEach(function(d,i){d.classList.toggle('sel',i===palSel);});if(items[palSel])items[palSel].scrollIntoView({block:'nearest'});});
+
+  var scrim=document.getElementById('scrim');
+  function closeNav(){body.classList.remove('navopen');}
+  document.getElementById('hamburger').addEventListener('click',function(){body.classList.toggle('navopen');});
+  scrim.addEventListener('click',closeNav);
+  navlinks.forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=980)closeNav();});});
+
+  document.addEventListener('keydown',function(e){var tag=(e.target.tagName||'').toLowerCase(),typing=(tag==='input'||tag==='textarea');
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal();return;}
+    if(typing)return;
+    if(e.key==='/'){e.preventDefault();openPal();return;}
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var idx=spyTargets.findIndex(function(s){return s.id==='#'+curId;});if(idx<0)idx=0;var go=e.key==='ArrowRight'?spyTargets[idx+1]:spyTargets[idx-1];if(go){e.preventDefault();location.hash=go.id;}}
+    else if(e.key.toLowerCase()==='t'){window.scrollTo({top:0,behavior:'smooth'});}
+    else if(e.key.toLowerCase()==='r'){var a=navByHref['#'+curId];if(a){var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('g1-read',JSON.stringify(readSet));refreshProgress();}}
+    else if(e.key.toLowerCase()==='b'){body.classList.toggle('navopen');}});
+})();
+</script>
+
+</body>
+</html>

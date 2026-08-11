@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A start-to-finish installation guide for a robotics workstation — Ubuntu, the toolchain, SSH to a robot, Python environments, ROS 2, vendor SDKs, simulation, and how to verify and reproduce the whole setup.">
+<title>The Robotics Software Installation Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --panel3:#222b3a;
+    --ink:#c9d1d9; --dim:#8b949e; --faint:#6e7681;
+    --cyan:#39d0d8; --orange:#ff9e44; --green:#56d364; --red:#f47272;
+    --amber:#e3b341; --purple:#bc8cff; --blue:#6cb6ff; --pink:#f778ba;
+    --line:#30363d; --code:#0b1622; --sel:#1f6feb44;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+    --fs:16px; --navw:316px; --topbarh:50px;
+    --accent:var(--orange);
+  }
+  html[data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef1f5; --panel3:#e4e9f0;
+    --ink:#1f2328; --dim:#57606a; --faint:#818b98;
+    --cyan:#0b8c97; --orange:#bc5d18; --green:#1a7f37; --red:#cf222e;
+    --amber:#9a6700; --purple:#8250df; --blue:#0969da; --pink:#bf3989;
+    --line:#d0d7de; --code:#f3f5f8; --sel:#0969da22;
+    --shadow:0 8px 30px rgba(140,149,159,.25);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  ::selection{background:var(--sel)}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.65;font-size:var(--fs);transition:background .25s ease,color .25s ease}
+  a{color:var(--accent)}
+  /* ---- commit-graph theme backdrop ---- */
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%23ff9e44' stroke-width='1.5' opacity='0.5'%3E%3Cpath d='M34 0 V120'/%3E%3Cpath d='M34 30 C34 44 78 42 78 56 C78 70 34 68 34 82'/%3E%3C/g%3E%3Cg fill='%23ff9e44' opacity='0.65'%3E%3Ccircle cx='34' cy='16' r='3'/%3E%3Ccircle cx='34' cy='100' r='3'/%3E%3Ccircle cx='78' cy='56' r='3'/%3E%3C/g%3E%3C/svg%3E");background-size:120px 120px;background-repeat:repeat}
+  html[data-theme="light"] #fx{opacity:.07}
+  /* ---- engine ---- */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--orange),var(--red));z-index:60;transition:width .1s linear}
+  #topbar{position:fixed;top:0;left:var(--navw);right:0;height:var(--topbarh);z-index:45;display:flex;align-items:center;gap:10px;padding:0 20px;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  #topbar .crumb{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  #topbar .crumb b{color:var(--ink)}
+  #topbar button,#topbar .kbtn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);height:32px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;transition:all .15s ease}
+  #topbar button:hover,#topbar .kbtn:hover{border-color:var(--accent);color:var(--accent)}
+  #topbar .icobtn{width:32px;padding:0;justify-content:center;font-size:15px}
+  #hamburger{display:none}
+  .kbtn .k{font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  #nav{position:fixed;top:0;left:0;width:var(--navw);height:100vh;overflow-y:auto;background:color-mix(in srgb,var(--panel) 92%,transparent);border-right:1px solid var(--line);padding:16px 12px 80px;z-index:50;backdrop-filter:blur(6px);scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .25s ease}
+  #nav::-webkit-scrollbar{width:9px}#nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+  #nav .brand{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+  #nav .brand .logo{width:28px;height:28px;flex:none}
+  #nav h1{font-size:14px;color:var(--accent);margin:0;letter-spacing:.3px}
+  #nav .sub{font-size:11px;color:var(--dim);margin:2px 0 10px 37px}
+  #navsearch{width:100%;background:var(--code);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 10px 8px 30px;font-size:12.5px;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+  #navsearch:focus{outline:none;border-color:var(--accent)}
+  #readbar{margin:10px 2px 6px;font-size:11px;color:var(--dim)}
+  #readbar .track{height:5px;background:var(--panel3);border-radius:3px;margin-top:4px;overflow:hidden}
+  #readbar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .3s ease}
+  .navpart{margin-top:8px}
+  button.part{width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--purple);font-weight:700;padding:8px 6px 4px;display:flex;align-items:center;justify-content:space-between;font-family:inherit}
+  button.part:hover{color:var(--accent)}
+  button.part .caret{transition:transform .2s ease;font-size:9px;color:var(--faint)}
+  .navpart.collapsed button.part .caret{transform:rotate(-90deg)}
+  .navlinks{overflow:hidden;transition:max-height .25s ease;max-height:2400px}
+  .navpart.collapsed .navlinks{max-height:0}
+  a.navlink{display:flex;align-items:center;gap:7px;color:var(--dim);text-decoration:none;font-size:12.5px;padding:4px 8px;border-radius:6px;border-left:2px solid transparent;line-height:1.4;transition:all .12s ease}
+  a.navlink:hover{color:var(--ink);background:var(--panel2)}
+  a.navlink.active{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+  a.navlink.hidden{display:none}
+  a.navlink .check{width:14px;height:14px;flex:none;border:1.5px solid var(--line);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all .15s ease}
+  a.navlink.read .check{background:var(--green);border-color:var(--green);color:#04210c}
+  a.navlink.read{color:var(--faint)}
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:46;opacity:0;pointer-events:none;transition:opacity .25s}
+  body.navopen #scrim{opacity:1;pointer-events:auto}
+  #wrap{position:relative;z-index:1;margin-left:var(--navw);padding:calc(var(--topbarh) + 4px) 40px 0}
+  .content{max-width:880px;margin:0 auto;padding:30px 0 140px}
+  h2.chap{font-size:29px;color:var(--accent);border-bottom:2px solid var(--accent);padding-bottom:8px;margin:64px 0 4px;scroll-margin-top:64px;position:relative}
+  h2.chap .n{color:var(--faint);font-size:17px;font-weight:400}
+  .readtime{font-size:12px;color:var(--faint);margin:0 0 14px;display:flex;align-items:center;gap:6px}
+  h2.part-divider{font-size:13px;text-transform:uppercase;letter-spacing:3px;color:var(--purple);margin:80px 0 0;padding:0;border:none;scroll-margin-top:64px;font-weight:700}
+  h3{font-size:20px;color:var(--orange);margin:34px 0 8px;scroll-margin-top:64px}
+  h4{font-size:15px;color:var(--purple);margin:22px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  .anchor{opacity:0;margin-left:8px;font-size:.7em;text-decoration:none;color:var(--faint);transition:opacity .15s}
+  h2.chap:hover .anchor,h3:hover .anchor{opacity:1}
+  p{margin:10px 0}ul,ol{margin:10px 0;padding-left:24px}li{margin:5px 0}
+  strong{color:var(--ink);font-weight:600}html[data-theme="dark"] strong{color:#e6edf3}em{color:var(--ink)}
+  code{background:var(--code);color:var(--accent);padding:1px 6px;border-radius:4px;font-family:'Consolas','Courier New',monospace;font-size:13.5px}
+  .codewrap{position:relative;margin:14px 0}
+  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0}
+  pre code{background:none;color:#d6e3f0;padding:0;font-size:13.5px;line-height:1.55}
+  pre .c{color:var(--faint)}pre .k{color:var(--orange)}pre .o{color:var(--green)}pre .a{color:var(--amber)}
+  .copybtn{position:absolute;top:8px;right:8px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;font-size:11px;padding:3px 9px;cursor:pointer;opacity:0;transition:all .15s;font-family:inherit}
+  .codewrap:hover .copybtn{opacity:1}.copybtn:hover{border-color:var(--accent);color:var(--accent)}.copybtn.done{color:var(--green);border-color:var(--green)}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent)}
+  tr:nth-child(even) td{background:color-mix(in srgb,var(--ink) 3%,transparent)}
+  table.lookup th{position:sticky;top:var(--topbarh);z-index:2}
+  .box{border-radius:10px;padding:12px 16px;margin:16px 0;border-left:4px solid;position:relative;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+  .box .h{font-weight:700;text-transform:uppercase;letter-spacing:.5px;font-size:12px;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .box .h::before{font-size:14px;font-family:'Segoe UI Emoji',sans-serif}
+  .field{border-color:var(--cyan)}.field .h{color:var(--cyan)}.field .h::before{content:"\1F500"}
+  .tip{border-color:var(--green)}.tip .h{color:var(--green)}.tip .h::before{content:"\1F4A1"}
+  .warn{border-color:var(--amber)}.warn .h{color:var(--amber)}.warn .h::before{content:"\26A0\FE0F"}
+  .danger{border-color:var(--red)}.danger .h{color:var(--red)}.danger .h::before{content:"\1F6D1"}
+  .lab{border-color:var(--purple)}.lab .h{color:var(--purple)}.lab .h::before{content:"\1F9EA"}
+  .case{border-color:var(--blue)}.case .h{color:var(--blue)}.case .h::before{content:"\1F4DC"}
+  .cmd{border-color:var(--orange)}.cmd .h{color:var(--orange)}.cmd .h::before{content:"\2328\FE0F"}
+  .intro{font-size:15px;color:var(--dim);font-style:italic;border-left:3px solid var(--line);padding-left:14px;margin:8px 0 20px}
+  .cover{padding:30px 0 22px;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .cover h1{font-size:44px;color:var(--accent);margin:0 0 6px;letter-spacing:.5px;background:linear-gradient(90deg,var(--orange),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .cover .tag{font-size:18px;color:var(--orange);margin-bottom:18px}
+  .cover .by{font-size:14px;color:var(--dim)}
+  .cover .ed{font-size:12px;color:var(--faint);margin-top:14px;letter-spacing:.5px}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:monospace}
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0}
+  a.xref{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)}a.xref:hover{border-bottom-style:solid}
+  figure{margin:22px 0;text-align:center}
+  figure svg{max-width:100%;height:auto;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px}
+  figcaption{font-size:12.5px;color:var(--dim);margin-top:8px;font-style:italic}
+  svg text{font-family:'Segoe UI',system-ui,sans-serif}
+  svg .box-f{fill:var(--panel2);stroke:var(--orange);stroke-width:1.5}
+  svg .box-w{fill:var(--panel2);stroke:var(--amber);stroke-width:1.5}
+  svg .box-d{fill:var(--panel2);stroke:var(--red);stroke-width:1.5}
+  svg .box-b{fill:var(--panel2);stroke:var(--blue);stroke-width:1.5}
+  svg .box-g{fill:var(--panel2);stroke:var(--green);stroke-width:1.5}
+  svg .box-v{fill:var(--panel2);stroke:var(--purple);stroke-width:1.5}
+  svg .lbl{fill:var(--ink);font-size:13px}svg .lbl-s{fill:var(--dim);font-size:11px}svg .lbl-t{fill:var(--orange);font-size:13px;font-weight:700}
+  svg .arr{stroke:var(--dim);stroke-width:1.5;fill:none}svg .arrm{stroke:var(--ink);stroke-width:1.5;fill:none}
+  .pager{display:flex;gap:14px;margin:50px 0 0;border-top:1px solid var(--line);padding-top:22px}
+  .pager a{flex:1;text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:12px 16px;color:var(--ink);transition:all .15s ease;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+  .pager a:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .pager .dir{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .pager .ttl{font-size:14px;color:var(--accent);margin-top:3px}.pager .next{text-align:right}.pager .empty{visibility:hidden}
+  #palette{position:fixed;inset:0;z-index:70;display:none;align-items:flex-start;justify-content:center;background:rgba(1,4,9,.6);backdrop-filter:blur(3px);padding-top:12vh}
+  #palette.open{display:flex}
+  #palbox{width:min(620px,92vw);max-height:70vh;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  #palinput{border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font-size:16px;padding:16px 18px;font-family:inherit;outline:none}
+  #palresults{overflow-y:auto;padding:6px}
+  .palitem{display:flex;align-items:baseline;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer}
+  .palitem .lvl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);min-width:46px}
+  .palitem .txt{font-size:14px;color:var(--ink)}.palitem .ctx{font-size:11px;color:var(--faint);margin-left:auto}
+  .palitem.sel,.palitem:hover{background:var(--panel2)}.palitem.sel .txt{color:var(--accent)}
+  #palhint{padding:8px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);display:flex;gap:14px}#palhint b{color:var(--dim);font-weight:600}
+  .backtop{position:fixed;bottom:22px;right:24px;background:var(--panel2);border:1px solid var(--line);color:var(--accent);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:17px;opacity:0;pointer-events:none;transition:opacity .25s,transform .15s;z-index:40;box-shadow:var(--shadow)}
+  .backtop.show{opacity:.9;pointer-events:auto}.backtop:hover{opacity:1;transform:translateY(-3px)}
+  @media(max-width:980px){:root{--navw:0px}#nav{transform:translateX(-105%);width:300px;box-shadow:var(--shadow)}body.navopen #nav{transform:translateX(0)}#topbar{left:0}#hamburger{display:inline-flex}#wrap{padding-left:18px;padding-right:18px}}
+  @media print{#nav,#topbar,#progress,.backtop,.copybtn,.pager,.anchor,#fx{display:none!important}#wrap{margin:0;padding:0}}
+</style>
+
+<style>
+  :root{--accent:var(--cyan)}
+  #progress,#readbar .fill{background:linear-gradient(90deg,var(--cyan),var(--green))}
+  .cover h1{background:linear-gradient(90deg,var(--cyan),var(--green))}
+  .cover .tag{color:var(--cyan)}
+  h3{color:var(--cyan)}
+  h4,h2.part-divider,button.part{color:var(--green)}
+  pre .k{color:var(--cyan)}
+  .cmd{border-color:var(--cyan)}.cmd .h{color:var(--cyan)}
+  .lab{border-color:var(--green)}.lab .h{color:var(--green)}
+  svg .box-f{stroke:var(--cyan)}svg .lbl-t{fill:var(--cyan)}
+  svg .box-v{stroke:var(--green)}
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.3;
+    background:
+      linear-gradient(rgba(57,208,216,.05) 1px,transparent 1px) 0 0/100% 30px,
+      linear-gradient(90deg,rgba(86,211,100,.03) 1px,transparent 1px) 0 0/30px 100%}
+  html[data-theme="light"] #fx{opacity:.22}
+</style>
+
+<style>
+  /* links to Field Guides that live outside this site — kept readable, not clickable */
+  .xref-offsite{color:var(--dim);border-bottom:1px dotted var(--faint);cursor:help}
+</style>
+</head>
+<body>
+<div id="fx" aria-hidden="true"></div>
+<div id="progress"></div>
+
+<nav id="nav">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="5" y="20" width="22" height="6" rx="2" fill="none" stroke="var(--cyan)" stroke-width="1.7"/>
+      <rect x="7.5" y="13" width="17" height="6" rx="2" fill="none" stroke="var(--cyan)" stroke-width="1.7" opacity=".8"/>
+      <rect x="10" y="6" width="12" height="6" rx="2" fill="none" stroke="var(--green)" stroke-width="1.7"/>
+      <path d="M13.5 9 l1.8 1.8 L19 6.6" fill="none" stroke="var(--green)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>ROBOTICS INSTALL GUIDE</h1>
+  </div>
+  <div class="sub">From Bare Machine to Working Robot Lab</div>
+  <input id="navsearch" type="text" placeholder="Filter chapters&hellip;" autocomplete="off" spellcheck="false">
+  <div id="readbar"><span id="readlabel">0 of 0 read</span><div class="track"><div class="fill" id="readfill"></div></div></div>
+
+  <div class="navpart">
+    <button class="part">Front Matter <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#how-to-read"><span class="check">&#10003;</span>How to Read This Book</a>
+      <a class="navlink" href="#order"><span class="check">&#10003;</span>The Order of Operations</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part I &mdash; The Foundation <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch1"><span class="check">&#10003;</span>1 &middot; Choosing the OS</a>
+      <a class="navlink" href="#ch2"><span class="check">&#10003;</span>2 &middot; Base System &amp; Toolchain</a>
+      <a class="navlink" href="#ch3"><span class="check">&#10003;</span>3 &middot; Git &amp; Your Editor</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part II &mdash; Reaching the Robot <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch4"><span class="check">&#10003;</span>4 &middot; SSH, Keys &amp; Config</a>
+      <a class="navlink" href="#ch5"><span class="check">&#10003;</span>5 &middot; Robot Network Setup</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part III &mdash; The Robotics Stack <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch6"><span class="check">&#10003;</span>6 &middot; Python Environments</a>
+      <a class="navlink" href="#ch7"><span class="check">&#10003;</span>7 &middot; Installing ROS 2</a>
+      <a class="navlink" href="#ch8"><span class="check">&#10003;</span>8 &middot; Vendor SDKs</a>
+      <a class="navlink" href="#ch9"><span class="check">&#10003;</span>9 &middot; Simulation</a>
+      <a class="navlink" href="#ch10"><span class="check">&#10003;</span>10 &middot; GPU &amp; CUDA</a>
+    </div>
+  </div>
+  <div class="navpart">
+    <button class="part">Part IV &mdash; Making It Last <span class="caret">&#9660;</span></button>
+    <div class="navlinks">
+      <a class="navlink" href="#ch11"><span class="check">&#10003;</span>11 &middot; Verify Everything</a>
+      <a class="navlink" href="#ch12"><span class="check">&#10003;</span>12 &middot; Reproducing the Setup</a>
+      <a class="navlink" href="#ch13"><span class="check">&#10003;</span>13 &middot; Troubleshooting</a>
+      <a class="navlink" href="#ch14"><span class="check">&#10003;</span>14 &middot; Glossary</a>
+      <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; The Whole Install</a>
+      <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Verification Checklist</a>
+    </div>
+  </div>
+</nav>
+
+<div id="scrim"></div>
+
+<header id="topbar">
+  <button id="hamburger" class="icobtn" title="Menu" aria-label="Toggle navigation">&#9776;</button>
+  <div class="crumb" id="crumb">The Robotics Software Installation Guide</div>
+  <button class="kbtn" id="palbtn" title="Search everything (Ctrl-K)"><span>&#128269; Search</span> <span class="k">Ctrl K</span></button>
+  <button class="icobtn" id="fsdown" title="Smaller text">A&#8722;</button>
+  <button class="icobtn" id="fsup" title="Larger text">A+</button>
+  <button class="icobtn" id="themebtn" title="Toggle light/dark">&#9789;</button>
+</header>
+
+<div id="wrap">
+<div class="content">
+
+  <div class="cover">
+    <h1>The Robotics Software Installation Guide</h1>
+    <div class="tag">From Bare Machine to Working Robot Lab</div>
+    <div class="by">Every robotics course loses its first week to installation, and it is almost never because any single step is hard. It is because the steps have an order, that order is rarely written down, and one missed dependency five layers back produces an error message that points nowhere near the cause. This book is that order. It goes from a bare Ubuntu machine to a workstation that can talk to a robot, run ROS 2, drive a vendor SDK, and launch a simulator &mdash; verifying each layer before building on it, so that when something breaks you know exactly which floor it broke on.</div>
+    <div class="ed">A companion in the Field Guide series &middot; the setup book for the ROS 2, G1 &amp; Lucky Robots guides &middot; offline, self-contained</div>
+  </div>
+
+<div class="box tip">
+    <span class="h">This book is interactive</span>
+    Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to search every heading; tick the sidebar <strong>checkboxes</strong> to track progress (or press <kbd>R</kbd>); use <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> to move chapter to chapter; toggle light/dark and text size top-right; hover any command block to <strong>copy</strong> it. Every chapter ends with a <span style="color:var(--cyan)">&#x2328;&#xFE0F; verification step</span> &mdash; run it before moving on. That discipline is the entire method of this book. Everything works offline.
+  </div>
+
+  <h2 class="chap" id="how-to-read">How to Read This Book <span class="n">— Front Matter</span></h2>
+  <p class="intro">This is a procedure, not a reference. Read it in order the first time, run every verification step, and don't skip ahead to the interesting part — the interesting part depends on the boring parts being correct.</p>
+
+  <div class="box field">
+    <span class="h">The journey, part by part</span>
+    <strong>The Order of Operations</strong> explains why sequence matters here more than in most software setup. <strong>Part I (The Foundation)</strong> is the operating system, the build toolchain, Git, and your editor. <strong>Part II (Reaching the Robot)</strong> is SSH and network configuration &mdash; the step that blocks more people than anything else. <strong>Part III (The Robotics Stack)</strong> is the actual robotics software: Python environments, ROS 2, vendor SDKs, simulators, and GPU drivers if you need them. <strong>Part IV (Making It Last)</strong> is verification, reproducing the setup on another machine, and troubleshooting &mdash; the part that turns a working machine into a working <em>lab</em>.
+  </div>
+
+  <div class="box tip">
+    <span class="h">How to actually use it</span>
+    Keep a text file open and paste every command you actually run into it, along with anything you had to change. You will need that file in <a class="xref" href="#ch12">Chapter 12</a>, and you will need it far sooner than you expect &mdash; the first time a machine gets wiped, or the first time a classmate asks how you got it working. This book installs the stack that the other robotics guides in this series assume: the <a class="xref" href="ROS2_Field_Guide.html#ch5">ROS 2 guide</a>, the <a class="xref" href="Unitree_G1_Field_Guide.html#ch3">Unitree G1 guide</a>, and the <a class="xref" href="Lucky_Robots_Field_Guide.html#ch2">Lucky Robots guide</a> each pick up where their chapter here leaves off.
+  </div>
+
+  <h2 class="chap" id="order">The Order of Operations <span class="n">— Front Matter</span></h2>
+  <p class="intro">Robotics software is a stack where each layer assumes the one beneath it. Install out of order and you get errors that describe a symptom several layers away from the cause.</p>
+
+  <figure>
+  <svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The robotics install stack, from operating system at the bottom to your project code at the top">
+    <rect x="40" y="252" width="480" height="34" rx="6" fill="none" stroke="var(--dim)"/>
+    <text x="280" y="274" text-anchor="middle" fill="var(--dim)" font-size="12">1 · Ubuntu LTS — the version everything else is pinned to</text>
+    <rect x="60" y="212" width="440" height="34" rx="6" fill="none" stroke="var(--cyan)"/>
+    <text x="280" y="234" text-anchor="middle" fill="var(--cyan)" font-size="12">2 · Toolchain — compiler, cmake, git, python3-venv</text>
+    <rect x="80" y="172" width="400" height="34" rx="6" fill="none" stroke="var(--cyan)"/>
+    <text x="280" y="194" text-anchor="middle" fill="var(--cyan)" font-size="12">3 · Network + SSH — can you reach the robot at all?</text>
+    <rect x="100" y="132" width="360" height="34" rx="6" fill="none" stroke="var(--blue)"/>
+    <text x="280" y="154" text-anchor="middle" fill="var(--blue)" font-size="12">4 · Python environment — venv, isolated</text>
+    <rect x="120" y="92" width="320" height="34" rx="6" fill="none" stroke="var(--green)"/>
+    <text x="280" y="114" text-anchor="middle" fill="var(--green)" font-size="12">5 · ROS 2 — apt, system-wide, version-locked</text>
+    <rect x="140" y="52" width="280" height="34" rx="6" fill="none" stroke="var(--amber)"/>
+    <text x="280" y="74" text-anchor="middle" fill="var(--amber)" font-size="12">6 · Vendor SDK + simulator</text>
+    <rect x="160" y="12" width="240" height="34" rx="6" fill="none" stroke="var(--purple)"/>
+    <text x="280" y="34" text-anchor="middle" fill="var(--purple)" font-size="12">7 · Your project code</text>
+  </svg>
+  <figcaption>Build upward and verify each layer before starting the next. A failure at level 6 is very often a mistake at level 1 or 3.</figcaption>
+  </figure>
+
+  <h3>The three rules</h3>
+  <ul>
+    <li><strong>The Ubuntu version determines everything above it.</strong> ROS 2 distributions are pinned to specific releases and vendor SDKs are built against specific Pythons. Pick the OS version last-to-first: decide what you need to run, then install the Ubuntu that supports it. Getting this wrong means reinstalling the machine.</li>
+    <li><strong>Verify each layer before building on it.</strong> Ten minutes of checks saves a day of debugging a symptom whose cause is four layers down. Every chapter here ends with a verification step for exactly this reason.</li>
+    <li><strong>Write down what you did.</strong> Not afterwards &mdash; as you go. See <a class="xref" href="#ch12">Chapter 12</a>.</li>
+  </ul>
+
+  <div class="box warn">
+    <span class="h">Do not start by pip-installing things</span>
+    The instinct when following a robotics tutorial is to run whatever <code>pip install</code> line it opens with. Resist it. Robotics stacks mix apt-installed system packages (ROS 2), pip packages, compiled dependencies (CycloneDDS), and vendor SDKs that pin specific versions of all of the above &mdash; and they interact. Installing pieces in an arbitrary order, into whatever Python happens to be active, produces a machine that works until it abruptly doesn't and that nobody can reconstruct. Follow the order in the diagram. It takes an afternoon and it holds up.
+  </div>
+
+  <h2 class="part-divider" id="partI">Part I — The Foundation</h2>
+
+  <h2 class="chap" id="ch1">Choosing the OS <span class="n">— Chapter 1</span></h2>
+  <p class="intro">This decision constrains everything else, and it is genuinely hard to change later. Spend ten minutes on it.</p>
+
+  <h3>Ubuntu LTS, and which one</h3>
+  <p>Robotics runs on Ubuntu. Not because it's better, but because it's what everything is built and tested against &mdash; ROS 2 targets it, vendor SDKs assume it, and every tutorial you'll follow was written on it. Using something else means porting, constantly, alone.</p>
+  <p>Pick the LTS that matches your ROS 2 distribution:</p>
+  <table>
+    <tr><th>Ubuntu</th><th>ROS 2</th><th>Choose it when</th></tr>
+    <tr><td><strong>24.04 LTS (Noble)</strong></td><td>Jazzy Jalisco (LTS, to 2029)</td><td><strong>Default for new setups</strong></td></tr>
+    <tr><td>22.04 LTS (Jammy)</td><td>Humble Hawksbill (LTS)</td><td>Your lab or a required package is on Humble</td></tr>
+    <tr><td>26.04 LTS</td><td>Lyrical Luth</td><td>Only if you need it — the ecosystem lags</td></tr>
+  </table>
+  <p>The rule: <strong>match whatever your lab, your robot's SDK, and your required packages use.</strong> Being one release ahead of your vendor SDK is a reliable way to spend a week compiling things.</p>
+
+  <h3>Bare metal, dual boot, WSL, or a VM</h3>
+  <table>
+    <tr><th>Option</th><th>Verdict</th></tr>
+    <tr><td><strong>Native / dual boot</strong></td><td><strong>Recommended.</strong> Full hardware access, real networking, GPU works</td></tr>
+    <tr><td><strong>WSL2</strong></td><td>Fine for learning ROS 2 and simulation. Networking to a physical robot is awkward; USB needs extra work</td></tr>
+    <tr><td><strong>VM</strong></td><td>Workable for coursework. Poor GPU, and bridged networking to a robot needs care</td></tr>
+    <tr><td><strong>Docker</strong></td><td>Excellent for reproducibility once you know the stack. A poor <em>first</em> environment — it hides the layers you're trying to learn</td></tr>
+  </table>
+  <p>If you'll connect to real robot hardware over Ethernet, native is worth the effort. Every virtualization layer between you and the network interface is somewhere multicast discovery can silently fail (<a class="xref" href="ROS2_Field_Guide.html#ch10">ROS 2 guide, Chapter 10</a>), and diagnosing that from inside a VM is genuinely unpleasant.</p>
+
+  <div class="box cmd">
+    <span class="h">Verify — know what you're on</span>
+    <pre><code>lsb_release -a                 # Ubuntu version — must match your ROS 2 plan
+uname -r                       # kernel
+python3 --version              # the system Python
+df -h /                        # at least 50 GB free; simulators are large
+free -h                        # 8 GB RAM minimum, 16+ comfortable</code></pre>
+    Write these four values into your setup notes now. When something breaks in three weeks, "which Ubuntu, which Python" is the first question anyone will ask you.
+  </div>
+
+  <h2 class="chap" id="ch2">Base System &amp; Toolchain <span class="n">— Chapter 2</span></h2>
+  <p class="intro">The compilers and build tools that everything above quietly assumes. Install them now, in one go, and you avoid a long sequence of interruptions later.</p>
+
+  <pre><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+
+# Build toolchain — vendor SDKs and DDS need to compile
+sudo apt install -y build-essential cmake git curl wget \
+    pkg-config software-properties-common
+
+# Python — note python3-venv is SEPARATE on Debian/Ubuntu
+sudo apt install -y python3 python3-pip python3-venv python3-dev
+
+# Networking and diagnostics — you will need all of these
+sudo apt install -y net-tools iproute2 iputils-ping \
+    openssh-client tcpdump
+
+# Quality of life
+sudo apt install -y tmux htop tree unzip jq</code></pre>
+
+  <h3>Why these specifically</h3>
+  <ul>
+    <li><strong>build-essential, cmake</strong> &mdash; CycloneDDS and most vendor SDKs compile from source. Without these you get a compiler error that reads like an SDK bug.</li>
+    <li><strong>python3-venv</strong> &mdash; a separate package on Ubuntu, and the single most common missing piece behind "venv doesn't work" (<a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Python_Environment_Field_Guide.html#ch2">Python guide, Chapter 2</a>).</li>
+    <li><strong>python3-dev</strong> &mdash; headers needed by any package with C extensions.</li>
+    <li><strong>iproute2, tcpdump</strong> &mdash; you cannot debug a robot network without being able to see it (<a class="xref" href="#ch5">Chapter 5</a>).</li>
+    <li><strong>tmux</strong> &mdash; robotics is multi-terminal work, and over SSH it means a dropped connection doesn't kill your running node.</li>
+  </ul>
+
+  <div class="box cmd">
+    <span class="h">Verify — the toolchain works</span>
+    <pre><code>gcc --version &amp;&amp; cmake --version &amp;&amp; git --version
+python3 -m venv --help | head -3      # must not error
+ip link show                          # your network interfaces</code></pre>
+    If <code>python3 -m venv --help</code> errors, install <code>python3-venv</code> before going further. Everything in Part III depends on it.
+  </div>
+
+  <h2 class="chap" id="ch3">Git &amp; Your Editor <span class="n">— Chapter 3</span></h2>
+  <p class="intro">Set these up before you write code, not after. Both take five minutes and both are worse to retrofit.</p>
+
+  <h3>Git identity</h3>
+  <pre><code>git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+git config --global init.defaultBranch main
+git config --global pull.rebase false
+git config --list</code></pre>
+  <p>Use the email attached to your GitHub account so commits link to you. The <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Git_GitHub_Field_Guide.html#ch3">Git &amp; GitHub Field Guide</a> covers the rest.</p>
+
+  <h3>VS Code</h3>
+  <pre><code>sudo snap install code --classic
+code --version
+
+code --install-extension ms-python.python
+code --install-extension ms-vscode-remote.remote-ssh
+code --install-extension ms-iot.vscode-ros
+code --install-extension charliermarsh.ruff</code></pre>
+  <p>Remote-SSH is the one that matters most here &mdash; it's how you'll edit code on the robot as if it were local (<a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/VS_Code_Field_Guide.html#ch11">VS Code guide, Chapter 11</a>). Set it up now so it's ready when <a class="xref" href="#ch4">Chapter 4</a> gets you connected.</p>
+
+  <div class="box cmd">
+    <span class="h">Verify — end to end</span>
+    <pre><code>mkdir -p ~/robotics-setup &amp;&amp; cd ~/robotics-setup
+git init &amp;&amp; echo "# Setup notes" > README.md
+git add . &amp;&amp; git commit -m "Start setup notes"
+code .</code></pre>
+    Use this repo as your setup log. Every command you run from here on goes in it &mdash; that's <a class="xref" href="#ch12">Chapter 12</a> starting early, and it costs nothing now.
+  </div>
+
+  <h2 class="part-divider" id="partII">Part II — Reaching the Robot</h2>
+
+  <h2 class="chap" id="ch4">SSH, Keys &amp; Config <span class="n">— Chapter 4</span></h2>
+  <p class="intro">SSH is how you reach every robot, lab machine, and single-board computer you'll work with. Doing it properly once removes an enormous amount of daily friction.</p>
+
+  <h3>What SSH gives you</h3>
+  <p>SSH opens an encrypted connection to another machine's shell. For robotics it's the backbone: a shell on the robot, file transfer, port forwarding to reach a dashboard running onboard, and the transport under VS Code's Remote-SSH.</p>
+
+  <h3>Generate a key</h3>
+  <p>Password authentication is fine once and tedious forever &mdash; and VS Code reconnects constantly. Use keys:</p>
+  <pre><code>ssh-keygen -t ed25519 -C "you@example.com"
+# Accept the default path. Set a passphrase.
+
+ls -l ~/.ssh/
+# id_ed25519       <- PRIVATE. Never leaves this machine. Never commit it.
+# id_ed25519.pub   <- public. Safe to copy anywhere.</code></pre>
+  <p>The mental model: the <strong>public</strong> key is a lock you can hand out freely; the <strong>private</strong> key is the only thing that opens it. Copy the public key to anything you want to log into:</p>
+  <pre><code>ssh-copy-id unitree@192.168.123.164
+ssh unitree@192.168.123.164          # no password now</code></pre>
+
+  <h3>ssh-agent</h3>
+  <p>A passphrase on your key is correct, and typing it every connection is not. <code>ssh-agent</code> holds the unlocked key in memory for the session:</p>
+  <pre><code>eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+ssh-add -l                            # what the agent is holding</code></pre>
+
+  <h3>~/.ssh/config — the real quality-of-life win</h3>
+  <p>Stop typing addresses and usernames. Define hosts once:</p>
+  <pre><code># ~/.ssh/config
+
+Host g1
+    HostName 192.168.123.164
+    User unitree
+    IdentityFile ~/.ssh/id_ed25519
+
+Host labpc
+    HostName lab-workstation.csusb.edu
+    User yourname
+    ForwardAgent yes
+
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3</code></pre>
+  <pre><code>chmod 600 ~/.ssh/config              # SSH refuses loose permissions
+ssh g1                               # that's the whole command now</code></pre>
+  <p>The <code>Host *</code> block sends a keepalive every 60 seconds, which stops idle sessions from dropping &mdash; worth having on any robot connection, and it's the difference between a stable VS Code Remote session and one that disconnects whenever you stop typing.</p>
+
+  <h3>The bits you'll actually use</h3>
+  <pre><code>scp file.py g1:~/                    # copy TO the robot
+scp g1:~/logs/run.csv ./             # copy FROM the robot
+scp -r ./project g1:~/               # whole directory
+
+ssh -L 8080:localhost:8080 g1        # robot's port 8080 -> your localhost:8080
+ssh g1 'ls -l ~/logs'                # run one command without a session
+
+ssh -v g1                            # verbose — the first debugging step</code></pre>
+  <p>Port forwarding is worth knowing: it lets you open a web dashboard or visualiser running on the robot in your own browser, which is otherwise awkward on a robot with no screen.</p>
+
+  <div class="box warn">
+    <span class="h">Never commit a private key</span>
+    <code>id_ed25519</code> without the <code>.pub</code> is the credential itself. Committing one to a repository &mdash; especially a public one &mdash; hands over access to everything that key opens, and automated scanners find them within minutes of a push. Add <code>.ssh/</code>, <code>*.pem</code>, and <code>id_*</code> to your global gitignore, and if you ever do push one, treat it as compromised: generate a new key and remove the old public key from every machine. Rotating is fast; deleting the commit is not sufficient, because the history is already out there. The <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Git_GitHub_Field_Guide.html#ch20">Git guide's security chapter</a> covers secret handling generally.
+  </div>
+
+  <div class="box cmd">
+    <span class="h">Verify — passwordless in one word</span>
+    <pre><code>ssh g1 'hostname &amp;&amp; whoami &amp;&amp; uname -a'</code></pre>
+    One command, no password prompt, output from the remote machine. If that works, VS Code Remote-SSH will work too &mdash; and if it doesn't, fix it here rather than debugging it through an editor.
+  </div>
+
+  <h2 class="chap" id="ch5">Robot Network Setup <span class="n">— Chapter 5</span></h2>
+  <p class="intro">Robots generally don't run DHCP. Nothing works until you assign yourself an address on their subnet by hand, and this is where most first sessions stall.</p>
+
+  <h3>The situation</h3>
+  <p>Most robots present a fixed internal network on a known subnet with no DHCP server. Plug in and your machine gets no address, so it cannot reach anything. You have to configure one yourself.</p>
+  <pre><code>ip link show                     # find the wired interface: enp2s0, eth0...
+
+# Temporary — cleared on reboot. Ideal for a lab session.
+sudo ip addr add 192.168.123.99/24 dev enp2s0
+sudo ip link set enp2s0 up
+
+ip addr show enp2s0              # confirm the address is there
+ping -c 3 192.168.123.161        # can you reach the robot?</code></pre>
+  <p>For the Unitree G1 the subnet is <code>192.168.123.0/24</code>; specific addresses are in the <a class="xref" href="Unitree_G1_Field_Guide.html#ch2">G1 guide, Chapter 2</a>. Other robots differ &mdash; check their documentation for the subnet and pick a free address on it.</p>
+
+  <h3>Making it persistent</h3>
+  <p>Retyping that every boot gets old. With NetworkManager:</p>
+  <pre><code>nmcli connection add type ethernet ifname enp2s0 con-name robot-net \
+    ip4 192.168.123.99/24
+nmcli connection up robot-net
+
+nmcli connection show                    # list profiles
+nmcli connection down robot-net          # switch back off</code></pre>
+  <p>A named profile you can bring up and down is better than editing your default connection, because you'll want normal internet on the same interface at other times.</p>
+
+  <h3>Diagnosing</h3>
+  <pre><code>ip addr show                     # do I have an address on the right subnet?
+ip route                         # where does traffic actually go?
+ping -c 3 192.168.123.161        # basic reachability
+arp -n                           # who has responded on this segment?
+sudo tcpdump -i enp2s0 -n        # is anything on the wire at all?</code></pre>
+  <p>Work in that order. If <code>ping</code> fails, nothing above it in the stack can possibly work, and debugging your SDK is wasted effort until it succeeds.</p>
+
+  <div class="box warn">
+    <span class="h">Two networks at once</span>
+    You'll often want the robot's subnet on Ethernet <em>and</em> internet on Wi-Fi at the same time. That works, but watch the routing: if the robot connection advertises a default route, your internet traffic may try to go through the robot and simply stop working. Assign the robot interface an address with <em>no</em> gateway (as above &mdash; note there's no <code>gw</code> in that <code>nmcli</code> command), so it's used only for its own subnet. Check with <code>ip route</code> that your default route still points at Wi-Fi. This catches people every single semester, and it presents as "the internet broke when I plugged in the robot", which sounds unrelated and isn't.
+  </div>
+
+  <div class="box cmd">
+    <span class="h">Verify — the layer that everything depends on</span>
+    <pre><code>ip addr show enp2s0 | grep inet     # address on the robot subnet
+ping -c 3 192.168.123.161          # robot responds
+ip route | head -3                 # default route still goes to the internet
+ssh g1 'hostname'                  # and you can log in</code></pre>
+    All four must pass before Part III. Every problem in the rest of this book is easier to diagnose when you know the network is sound.
+  </div>
+
+  <h2 class="part-divider" id="partIII">Part III — The Robotics Stack</h2>
+
+  <h2 class="chap" id="ch6">Python Environments <span class="n">— Chapter 6</span></h2>
+  <p class="intro">Set the pattern now, before any robotics package is installed. Retrofitting isolation onto a machine where everything went into the system Python is genuinely painful.</p>
+
+  <h3>The rule</h3>
+  <p>One virtual environment per project, named <code>.venv</code>, in the project root, gitignored:</p>
+  <pre><code>mkdir -p ~/robotics/myproject &amp;&amp; cd ~/robotics/myproject
+git init
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip --version               # confirm it's the venv's pip
+
+echo ".venv/" >> .gitignore</code></pre>
+  <p>Use <code>python -m pip install</code> rather than bare <code>pip install</code> &mdash; it guarantees the installer and interpreter match, which structurally prevents the most common Python error. The <a class="xref" href="https://csusb-jhbc-cyber-ai-robotics.github.io/coding-fundamentals/Python_Environment_Field_Guide.html#ch1">Python Environment Field Guide</a> makes the full case.</p>
+
+  <h3>The robotics exception</h3>
+  <p>ROS 2's Python packages are installed system-wide by apt and a normal isolated venv cannot see them &mdash; <code>import rclpy</code> will fail. When a project needs both ROS 2 and its own pip packages, source ROS first and create the venv with system packages visible:</p>
+  <pre><code>source /opt/ros/jazzy/setup.bash                  # 1. ROS first
+python3 -m venv --system-site-packages .venv      # 2. venv that can see it
+source .venv/bin/activate                         # 3. then activate</code></pre>
+  <p>Order matters. Reverse steps 1 and 3 and you'll be back on the system Python without noticing.</p>
+
+  <div class="box cmd">
+    <span class="h">Verify — isolation actually works</span>
+    <pre><code>source .venv/bin/activate
+python -c "import sys; print(sys.executable); print(sys.prefix)"
+# both must point inside your .venv
+
+python -m pip install requests
+python -c "import requests; print(requests.__file__)"
+deactivate
+python3 -c "import requests"        # ModuleNotFoundError — correct!</code></pre>
+    That final error proves the isolation is real. If <code>requests</code> imports after deactivating, you installed into the system Python and should sort that out now rather than later.
+  </div>
+
+  <h2 class="chap" id="ch7">Installing ROS 2 <span class="n">— Chapter 7</span></h2>
+  <p class="intro">System-wide via apt, matched to your Ubuntu version. Skip this chapter if your robot's SDK speaks DDS directly and you don't need the ROS ecosystem.</p>
+
+  <pre><code># Locale — ROS 2 requires UTF-8
+sudo apt update &amp;&amp; sudo apt install -y locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+
+# Repository
+sudo add-apt-repository universe -y
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+    -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+    http://packages.ros.org/ros2/ubuntu $(. /etc/os-release &amp;&amp; echo $UBUNTU_CODENAME) main" \
+    | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# Install
+sudo apt update &amp;&amp; sudo apt install -y ros-jazzy-desktop ros-dev-tools
+
+# Source it — required in EVERY new terminal
+source /opt/ros/jazzy/setup.bash</code></pre>
+
+  <h3>An alias instead of .bashrc</h3>
+  <p>Adding the source line to <code>~/.bashrc</code> is convenient and has a cost: it affects every terminal you ever open, including ones where you want a clean environment or a different distribution. An alias keeps it explicit:</p>
+  <pre><code>echo "alias sj='source /opt/ros/jazzy/setup.bash'" >> ~/.bashrc
+source ~/.bashrc</code></pre>
+
+  <div class="box cmd">
+    <span class="h">Verify — talker and listener</span>
+    <pre><code>source /opt/ros/jazzy/setup.bash
+ros2 --help
+printenv | grep -i ros            # ROS_DISTRO should be set
+
+# Terminal 1:
+ros2 run demo_nodes_cpp talker
+# Terminal 2 (source again first):
+ros2 run demo_nodes_py listener
+# Terminal 3:
+ros2 topic list &amp;&amp; ros2 topic hz /chatter</code></pre>
+    Messages flowing between the two means the install and the DDS layer are both working. Continue in the <a class="xref" href="ROS2_Field_Guide.html#ch6">ROS 2 guide</a>.
+  </div>
+
+  <h2 class="chap" id="ch8">Vendor SDKs <span class="n">— Chapter 8</span></h2>
+  <p class="intro">Where installs get fragile. Vendor SDKs pin specific versions of compiled dependencies, and their error messages rarely name the real problem.</p>
+
+  <h3>The Unitree SDK, as a worked example</h3>
+  <pre><code>cd ~
+git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
+cd unitree_sdk2_python
+pip3 install -e .</code></pre>
+  <p>This commonly fails, because it needs <strong>cyclonedds 0.10.2</strong> specifically. Build it and point the SDK at it:</p>
+  <pre><code>cd ~
+git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+cd cyclonedds &amp;&amp; mkdir build install &amp;&amp; cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=../install
+cmake --build . --target install
+
+export CYCLONEDDS_HOME=~/cyclonedds/install
+echo 'export CYCLONEDDS_HOME=~/cyclonedds/install' >> ~/.bashrc
+
+cd ~/unitree_sdk2_python &amp;&amp; pip3 install -e .</code></pre>
+  <p>This is why <a class="xref" href="#ch2">Chapter 2</a> installed <code>build-essential</code> and <code>cmake</code> &mdash; without them the <code>cmake</code> step fails with an error that looks like an SDK problem.</p>
+
+  <h3>The general pattern</h3>
+  <ul>
+    <li><strong>Read the vendor's README first</strong>, all of it, before running anything. The prerequisites are usually stated and usually skipped.</li>
+    <li><strong>Note the pinned versions</strong> &mdash; Python version, numpy version, DDS version &mdash; and honour them exactly. Upgrading numpy because something else wanted a newer one is a classic way to break a working robot setup.</li>
+    <li><strong>Install into a venv</strong>, not system-wide, so a bad install is one <code>rm -rf</code> away from gone.</li>
+    <li><strong>Use <code>pip install -e .</code></strong> for cloned SDKs &mdash; editable installs let you read and patch the source, which you will end up doing.</li>
+    <li><strong>Record the commit</strong> you cloned. "The SDK from GitHub" is not a version; <code>git rev-parse HEAD</code> is.</li>
+  </ul>
+
+  <div class="box cmd">
+    <span class="h">Verify — import and connect</span>
+    <pre><code>python -c "import unitree_sdk2py; print(unitree_sdk2py.__file__)"
+echo $CYCLONEDDS_HOME
+cd ~/unitree_sdk2_python &amp;&amp; git rev-parse --short HEAD   # record this</code></pre>
+    Then run the read-only subscriber from the <a class="xref" href="Unitree_G1_Field_Guide.html#ch3">G1 guide, Chapter 3</a> against a real robot. Importing proves the install; receiving state proves the whole stack.
+  </div>
+
+  <h2 class="chap" id="ch9">Simulation <span class="n">— Chapter 9</span></h2>
+  <p class="intro">Install a simulator even if you have hardware — especially if you have hardware. It's where you'll do most of your actual iterating.</p>
+
+  <pre><code># Lucky Engine: download from luckyrobots.com, then:
+source .venv/bin/activate
+pip install luckyrobots
+export LUCKYENGINE_PATH=/path/to/LuckyEngine
+echo 'export LUCKYENGINE_PATH=/path/to/LuckyEngine' >> ~/.bashrc
+
+# Plain MuJoCo, if you want the physics engine on its own:
+pip install mujoco
+python -m mujoco.viewer                 # opens a viewer window
+
+# Gazebo, if you're working in ROS 2:
+sudo apt install -y ros-jazzy-ros-gz</code></pre>
+  <p>Simulators are large and pull in heavy dependencies, so this is exactly the situation venvs exist for. The <a class="xref" href="Lucky_Robots_Field_Guide.html#ch2">Lucky Robots guide</a> continues from here.</p>
+
+  <div class="box cmd">
+    <span class="h">Verify — connect to the engine</span>
+    <pre><code>python -c "
+from luckyrobots import Session
+with Session() as s:
+    s.connect(timeout_s=30.0)
+    info = s.get_model_info()
+    print('nq', info.nq, 'nu', info.nu)
+"</code></pre>
+    Launch the engine first. Joint counts printing means the install, the path variable, and the gRPC connection are all correct.
+  </div>
+
+  <h2 class="chap" id="ch10">GPU &amp; CUDA <span class="n">— Chapter 10</span></h2>
+  <p class="intro">Only if you need it. GPU setup is the most brittle part of any robotics install, and a great many projects never require one.</p>
+
+  <h3>Do you actually need this?</h3>
+  <table>
+    <tr><th>You need a GPU for</th><th>You don't for</th></tr>
+    <tr><td>Training deep networks / RL policies</td><td>Control loops and classical robotics</td></tr>
+    <tr><td>Real-time vision models on video</td><td>ROS 2, DDS, most SDK work</td></tr>
+    <tr><td>Isaac Sim and photorealistic rendering</td><td>MuJoCo state-based simulation</td></tr>
+    <tr><td>Large local language models</td><td>Calling a hosted model API</td></tr>
+  </table>
+  <p>If you're not in the left column, skip this chapter. Installing CUDA "just in case" is a common way to break a working machine.</p>
+
+  <h3>Driver first, always</h3>
+  <pre><code>ubuntu-drivers devices                    # what does Ubuntu recommend?
+sudo ubuntu-drivers autoinstall
+sudo reboot
+
+nvidia-smi                                # driver version + CUDA capability</code></pre>
+  <p><code>nvidia-smi</code> reporting your card means the driver is working. That's the layer to get right before anything else; most CUDA problems are actually driver problems.</p>
+
+  <h3>CUDA via the framework, not by hand</h3>
+  <p>Modern PyTorch ships its own CUDA runtime. Installing the CUDA toolkit system-wide is usually unnecessary and is a reliable source of version conflicts:</p>
+  <pre><code>pip install torch --index-url https://download.pytorch.org/whl/cu124
+python -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"</code></pre>
+  <p><code>True</code> means you're done. Only install the full toolkit if you're compiling CUDA code yourself.</p>
+
+  <div class="box warn">
+    <span class="h">Do not chase CUDA versions</span>
+    The compatibility matrix between driver, CUDA runtime, PyTorch, and any given framework is genuinely fiddly, and the standard failure is a spiral: install a different CUDA to satisfy one package, break another, install a third, end up with a machine nobody can reason about. <strong>Install the driver, then let the framework bring its own CUDA.</strong> If two packages genuinely need incompatible CUDA versions, that's what separate virtual environments &mdash; or conda, which can manage CUDA runtimes per environment &mdash; are for. Do not try to satisfy both system-wide. And if a GPU setup does get into an unexplainable state, reinstalling the driver cleanly is faster than diagnosing it.
+  </div>
+
+  <h2 class="part-divider" id="partIV">Part IV — Making It Last</h2>
+
+  <h2 class="chap" id="ch11">Verify Everything <span class="n">— Chapter 11</span></h2>
+  <p class="intro">Run the whole stack top to bottom before you declare the machine ready. Finding a gap now costs minutes; finding it during a lab session costs the session.</p>
+
+  <h3>The full sweep</h3>
+  <pre><code>echo "=== System ==="
+lsb_release -d &amp;&amp; uname -r &amp;&amp; python3 --version
+
+echo "=== Toolchain ==="
+gcc --version | head -1 &amp;&amp; cmake --version | head -1 &amp;&amp; git --version
+
+echo "=== Network ==="
+ip -brief addr show
+ip route | head -3
+
+echo "=== SSH ==="
+ssh -o BatchMode=yes g1 'hostname' || echo "SSH to robot FAILED"
+
+echo "=== Python ==="
+source ~/robotics/myproject/.venv/bin/activate
+python -c "import sys; print(sys.executable)"
+
+echo "=== ROS 2 ==="
+source /opt/ros/jazzy/setup.bash
+ros2 --version &amp;&amp; echo "ROS_DISTRO=$ROS_DISTRO"
+
+echo "=== SDK ==="
+python -c "import unitree_sdk2py; print('SDK ok')" 2>/dev/null || echo "SDK not available"
+
+echo "=== Sim ==="
+python -c "import luckyrobots; print('luckyrobots ok')" 2>/dev/null || echo "sim not available"</code></pre>
+  <p>Save that as <code>verify.sh</code> in your setup repo. Run it after any significant change, and on any new machine. Knowing precisely which line fails is worth far more than a general sense that something is wrong.</p>
+
+  <h3>The functional tests</h3>
+  <p>Imports are not proof. Each layer has a test that actually exercises it:</p>
+  <table>
+    <tr><th>Layer</th><th>Real test</th></tr>
+    <tr><td>Network</td><td><code>ping</code> the robot succeeds</td></tr>
+    <tr><td>SSH</td><td><code>ssh g1 'hostname'</code> with no password prompt</td></tr>
+    <tr><td>Python</td><td>Import fails <em>after</em> <code>deactivate</code> (proves isolation)</td></tr>
+    <tr><td>ROS 2</td><td>talker/listener exchange messages</td></tr>
+    <tr><td>Vendor SDK</td><td>Read-only subscriber receives live robot state</td></tr>
+    <tr><td>Simulator</td><td>Connect and print joint counts</td></tr>
+    <tr><td>GPU</td><td><code>torch.cuda.is_available()</code> returns True</td></tr>
+  </table>
+
+  <h2 class="chap" id="ch12">Reproducing the Setup <span class="n">— Chapter 12</span></h2>
+  <p class="intro">A working machine that only one person can rebuild is a liability with a deadline attached. This chapter turns it into an asset.</p>
+
+  <h3>What to capture</h3>
+  <ul>
+    <li><strong>The exact commands you ran</strong>, in order, in a script. Not prose &mdash; runnable lines.</li>
+    <li><strong>Versions of everything</strong>: Ubuntu, Python, ROS distro, SDK commit hash, simulator build.</li>
+    <li><strong><code>requirements.txt</code></strong> from every venv, pinned.</li>
+    <li><strong>Config files</strong>: <code>~/.ssh/config</code> (without keys), network profiles, CycloneDDS XML.</li>
+    <li><strong>Environment variables</strong> you set: <code>CYCLONEDDS_HOME</code>, <code>LUCKYENGINE_PATH</code>, <code>ROS_DOMAIN_ID</code>.</li>
+    <li><strong>The things that went wrong</strong> and what fixed them. This is the most valuable part and the part everyone omits.</li>
+  </ul>
+
+  <pre><code>cd ~/robotics-setup
+
+# Capture the current state
+source ~/robotics/myproject/.venv/bin/activate
+pip freeze > requirements.txt
+
+{
+  echo "# Environment"
+  lsb_release -d
+  python3 --version
+  echo "ROS_DISTRO=$ROS_DISTRO"
+  echo "SDK commit: $(cd ~/unitree_sdk2_python &amp;&amp; git rev-parse --short HEAD)"
+} > VERSIONS.md
+
+git add -A &amp;&amp; git commit -m "Capture working setup"</code></pre>
+
+  <h3>The rebuild test</h3>
+  <p>The only way to know your notes are sufficient is to use them. On a spare machine, a VM, or a fresh container, follow your own <code>setup.sh</code> and nothing else. You will find something missing &mdash; almost everyone does, usually a package installed months ago and forgotten. Fix the script, and now it's real.</p>
+
+  <div class="box field">
+    <span class="h">From the field — the working state is the asset</span>
+    A configured robotics machine represents real accumulated knowledge: which versions coexist, which environment variable was needed, which dependency had to be built from source, and the thirty minutes someone lost discovering it. That knowledge lives in exactly one place &mdash; a hard drive &mdash; until you write it down. Machines get wiped, students graduate, and the person who set it up is unreachable the week of the demo. Labs that keep a working <code>setup.sh</code> in version control recover from a dead machine in an hour. Labs that don't lose days reconstructing a configuration nobody fully understood, and they lose them at the worst possible moment, because that's when the machine's condition finally matters enough to notice. The cost of capturing it is twenty minutes while everything is fresh. The cost of not capturing it comes due on someone else's deadline.
+  </div>
+
+  <h2 class="chap" id="ch13">Troubleshooting <span class="n">— Chapter 13</span></h2>
+  <p class="intro">Install problems, organized by the layer they actually live on rather than the layer that reported them.</p>
+
+  <h3>Diagnose downward</h3>
+  <p>Errors surface at the top of the stack and are caused near the bottom. When something fails, test <em>downward</em> from the failure until you find a layer that works &mdash; the fault is in the layer just above it.</p>
+  <pre><code>python -c "import unitree_sdk2py"    # fails? test lower:
+python -c "import sys; print(sys.executable)"   # right environment?
+ping 192.168.123.161                            # network up?
+ip addr show                                    # address assigned?</code></pre>
+
+  <h3>The table</h3>
+  <table>
+    <tr><th>Symptom</th><th>Layer</th><th>Fix</th></tr>
+    <tr><td><code>No module named venv</code></td><td>Toolchain</td><td><code>sudo apt install python3-venv</code> (<a class="xref" href="#ch2">Ch 2</a>)</td></tr>
+    <tr><td><code>externally-managed-environment</code></td><td>Python</td><td>Make a venv. Don't use <code>--break-system-packages</code></td></tr>
+    <tr><td>C compiler errors during pip install</td><td>Toolchain</td><td><code>build-essential</code>, <code>cmake</code>, <code>python3-dev</code></td></tr>
+    <tr><td>SDK install fails on cyclonedds</td><td>Vendor</td><td>Build 0.10.x, set <code>CYCLONEDDS_HOME</code> (<a class="xref" href="#ch8">Ch 8</a>)</td></tr>
+    <tr><td>Import works in one terminal, not another</td><td>Python</td><td>venv not activated; check <code>sys.executable</code></td></tr>
+    <tr><td><code>import rclpy</code> fails in a venv</td><td>Python/ROS</td><td>Recreate with <code>--system-site-packages</code> (<a class="xref" href="#ch6">Ch 6</a>)</td></tr>
+    <tr><td><code>ros2: command not found</code></td><td>ROS 2</td><td>Source the setup script — every terminal (<a class="xref" href="#ch7">Ch 7</a>)</td></tr>
+    <tr><td>Can't ping the robot</td><td>Network</td><td>No DHCP — set a static address (<a class="xref" href="#ch5">Ch 5</a>)</td></tr>
+    <tr><td>Internet dies when the robot is plugged in</td><td>Network</td><td>Robot interface is advertising a default route (<a class="xref" href="#ch5">Ch 5</a>)</td></tr>
+    <tr><td>SSH asks for a password after <code>ssh-copy-id</code></td><td>SSH</td><td>Permissions: <code>chmod 700 ~/.ssh</code>, <code>600</code> on files</td></tr>
+    <tr><td>SSH drops when idle</td><td>SSH</td><td><code>ServerAliveInterval 60</code> in config (<a class="xref" href="#ch4">Ch 4</a>)</td></tr>
+    <tr><td>SDK script runs, prints nothing, no error</td><td>Vendor</td><td>Wrong interface name (<a class="xref" href="Unitree_G1_Field_Guide.html#ch2">G1 guide, Ch 2</a>)</td></tr>
+    <tr><td>ROS 2 nodes can't see each other across machines</td><td>ROS 2</td><td>Match <code>ROS_DOMAIN_ID</code>; check multicast isn't blocked</td></tr>
+    <tr><td><code>torch.cuda.is_available()</code> is False</td><td>GPU</td><td>Check <code>nvidia-smi</code> first — usually the driver (<a class="xref" href="#ch10">Ch 10</a>)</td></tr>
+    <tr><td>Everything broke after an upgrade</td><td>Any</td><td>This is what <a class="xref" href="#ch12">Chapter 12</a> is for</td></tr>
+  </table>
+
+  <h2 class="chap" id="ch14">Glossary <span class="n">— Chapter 14</span></h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><strong>LTS</strong></td><td>Long Term Support — the Ubuntu releases with multi-year support. Always use one.</td></tr>
+    <tr><td><strong>apt</strong></td><td>Ubuntu's system package manager. Installs system-wide.</td></tr>
+    <tr><td><strong>Toolchain</strong></td><td>Compiler and build tools that source installs depend on.</td></tr>
+    <tr><td><strong>build-essential</strong></td><td>The Ubuntu meta-package providing gcc, make, and headers.</td></tr>
+    <tr><td><strong>venv</strong></td><td>An isolated Python environment. One per project.</td></tr>
+    <tr><td><strong>--system-site-packages</strong></td><td>venv flag letting it see system packages. Needed for ROS 2.</td></tr>
+    <tr><td><strong>Editable install</strong></td><td><code>pip install -e .</code> — links to source so edits apply immediately.</td></tr>
+    <tr><td><strong>SSH key pair</strong></td><td>Public key (share freely) and private key (never share).</td></tr>
+    <tr><td><strong>ssh-agent</strong></td><td>Holds your unlocked private key so you type the passphrase once.</td></tr>
+    <tr><td><strong>~/.ssh/config</strong></td><td>Per-host SSH settings. Turns a long command into <code>ssh g1</code>.</td></tr>
+    <tr><td><strong>Port forwarding</strong></td><td>Tunnelling a remote port to your local machine over SSH.</td></tr>
+    <tr><td><strong>Static IP</strong></td><td>A manually assigned address. Required — robots rarely run DHCP.</td></tr>
+    <tr><td><strong>Subnet</strong></td><td>The address range a network segment uses, e.g. 192.168.123.0/24.</td></tr>
+    <tr><td><strong>Default route</strong></td><td>Where traffic goes when no specific route matches. Watch this with two networks.</td></tr>
+    <tr><td><strong>ROS distribution</strong></td><td>A named ROS 2 release, pinned to an Ubuntu version.</td></tr>
+    <tr><td><strong>Sourcing</strong></td><td>Running a setup script to add ROS to your environment. Every terminal.</td></tr>
+    <tr><td><strong>CycloneDDS</strong></td><td>The DDS implementation used by ROS 2 and the Unitree SDK. Version-sensitive.</td></tr>
+    <tr><td><strong>Driver vs CUDA toolkit</strong></td><td>The driver talks to the card; the toolkit compiles GPU code. You usually only need the driver.</td></tr>
+  </table>
+
+  <h2 class="chap" id="appA">The Whole Install <span class="n">— Appendix A</span></h2>
+  <p class="intro">Every command in this book, in order. Adapt the interface names, addresses, and paths to your machine — then keep this as your setup.sh.</p>
+
+  <h3>1 — Base system</h3>
+  <pre><code>sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y build-essential cmake git curl wget pkg-config \
+    software-properties-common
+sudo apt install -y python3 python3-pip python3-venv python3-dev
+sudo apt install -y net-tools iproute2 iputils-ping openssh-client tcpdump
+sudo apt install -y tmux htop tree unzip jq</code></pre>
+
+  <h3>2 — Git &amp; editor</h3>
+  <pre><code>git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+git config --global init.defaultBranch main
+
+sudo snap install code --classic
+code --install-extension ms-python.python
+code --install-extension ms-vscode-remote.remote-ssh
+code --install-extension ms-iot.vscode-ros
+code --install-extension charliermarsh.ruff</code></pre>
+
+  <h3>3 — SSH</h3>
+  <pre><code>ssh-keygen -t ed25519 -C "you@example.com"
+eval "$(ssh-agent -s)" &amp;&amp; ssh-add ~/.ssh/id_ed25519
+ssh-copy-id unitree@192.168.123.164
+chmod 600 ~/.ssh/config
+ssh g1 'hostname'</code></pre>
+
+  <h3>4 — Robot network</h3>
+  <pre><code>ip link show
+nmcli connection add type ethernet ifname enp2s0 con-name robot-net \
+    ip4 192.168.123.99/24
+nmcli connection up robot-net
+ping -c 3 192.168.123.161
+ip route | head -3          # default route must still be your internet</code></pre>
+
+  <h3>5 — Python environment</h3>
+  <pre><code>mkdir -p ~/robotics/myproject &amp;&amp; cd ~/robotics/myproject
+git init &amp;&amp; echo ".venv/" >> .gitignore
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+python -m pip install --upgrade pip</code></pre>
+
+  <h3>6 — ROS 2</h3>
+  <pre><code>sudo apt install -y locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+sudo add-apt-repository universe -y
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+    -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+    http://packages.ros.org/ros2/ubuntu $(. /etc/os-release &amp;&amp; echo $UBUNTU_CODENAME) main" \
+    | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+sudo apt update &amp;&amp; sudo apt install -y ros-jazzy-desktop ros-dev-tools
+source /opt/ros/jazzy/setup.bash</code></pre>
+
+  <h3>7 — Vendor SDK</h3>
+  <pre><code>cd ~ &amp;&amp; git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+cd cyclonedds &amp;&amp; mkdir build install &amp;&amp; cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=../install &amp;&amp; cmake --build . --target install
+export CYCLONEDDS_HOME=~/cyclonedds/install
+echo 'export CYCLONEDDS_HOME=~/cyclonedds/install' >> ~/.bashrc
+
+cd ~ &amp;&amp; git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
+cd unitree_sdk2_python &amp;&amp; pip3 install -e .</code></pre>
+
+  <h3>8 — Simulation</h3>
+  <pre><code>pip install luckyrobots
+export LUCKYENGINE_PATH=/path/to/LuckyEngine
+echo 'export LUCKYENGINE_PATH=/path/to/LuckyEngine' >> ~/.bashrc
+pip install mujoco</code></pre>
+
+  <h3>9 — GPU (only if needed)</h3>
+  <pre><code>ubuntu-drivers devices &amp;&amp; sudo ubuntu-drivers autoinstall &amp;&amp; sudo reboot
+nvidia-smi
+pip install torch --index-url https://download.pytorch.org/whl/cu124
+python -c "import torch; print(torch.cuda.is_available())"</code></pre>
+
+  <h3>10 — Capture it</h3>
+  <pre><code>pip freeze > requirements.txt
+git add -A &amp;&amp; git commit -m "Working setup"</code></pre>
+
+  <h2 class="chap" id="appB">Verification Checklist <span class="n">— Appendix B</span></h2>
+  <p class="intro">Print this. Work down it in order. Do not proceed past a failure — everything above depends on everything below.</p>
+
+  <h3>Foundation</h3>
+  <ul>
+    <li>&#9744; <code>lsb_release -a</code> shows the Ubuntu version your ROS 2 distro requires</li>
+    <li>&#9744; <code>gcc --version</code>, <code>cmake --version</code>, <code>git --version</code> all respond</li>
+    <li>&#9744; <code>python3 -m venv --help</code> does not error</li>
+    <li>&#9744; <code>git config --list</code> shows your name and email</li>
+    <li>&#9744; <code>code --version</code> responds; Remote-SSH extension installed</li>
+  </ul>
+
+  <h3>Reaching the robot</h3>
+  <ul>
+    <li>&#9744; <code>ls ~/.ssh/id_ed25519.pub</code> exists; private key is <strong>not</strong> in any repo</li>
+    <li>&#9744; <code>ssh g1 'hostname'</code> works with no password prompt</li>
+    <li>&#9744; <code>ip addr show</code> shows an address on the robot's subnet</li>
+    <li>&#9744; <code>ping -c 3 &lt;robot&gt;</code> succeeds</li>
+    <li>&#9744; <code>ip route</code> — default route still points at your internet connection</li>
+  </ul>
+
+  <h3>The stack</h3>
+  <ul>
+    <li>&#9744; <code>sys.executable</code> inside the venv points into <code>.venv</code></li>
+    <li>&#9744; A package imports inside the venv and <em>fails</em> after <code>deactivate</code></li>
+    <li>&#9744; <code>ros2 --version</code> responds after sourcing; <code>ROS_DISTRO</code> is set</li>
+    <li>&#9744; talker and listener exchange messages</li>
+    <li>&#9744; <code>import unitree_sdk2py</code> succeeds; <code>CYCLONEDDS_HOME</code> is set</li>
+    <li>&#9744; Read-only subscriber receives live robot state</li>
+    <li>&#9744; Simulator connects and prints joint counts</li>
+    <li>&#9744; (If needed) <code>nvidia-smi</code> and <code>torch.cuda.is_available()</code> both good</li>
+  </ul>
+
+  <h3>Making it last</h3>
+  <ul>
+    <li>&#9744; <code>setup.sh</code> in version control with every command you ran</li>
+    <li>&#9744; <code>requirements.txt</code> committed from every venv</li>
+    <li>&#9744; <code>VERSIONS.md</code> records Ubuntu, Python, ROS distro, SDK commit</li>
+    <li>&#9744; Problems you hit and their fixes written down</li>
+    <li>&#9744; <code>verify.sh</code> saved and passing</li>
+    <li>&#9744; The rebuild test done on a second machine or VM</li>
+  </ul>
+
+  <div class="box field">
+    <span class="h">From the field — the method, not the commands</span>
+    The specific commands in this book will age. Ubuntu will move on, ROS 2 will release a new distro, the Unitree SDK will restructure, and some of these lines will need adjusting within a year. The method won't. <strong>Install in dependency order, bottom-up. Verify each layer before building on it. Diagnose downward from a failure until you find a layer that works. Write down what you did while you still remember it.</strong> That method applies to any robotics stack, any vendor, any year &mdash; and it's the actual difference between an engineer who can set up a lab and one who can only follow a tutorial that happens to still be accurate. The commands are worth having; the four sentences above are worth learning.
+  </div>
+
+  <hr>
+  <div class="box field">
+    <span class="h">A closing word</span>
+    Installation is the least glamorous part of robotics and it consumes a genuinely absurd share of the field's collective time &mdash; largely because it's treated as a preliminary rather than as work, so nobody documents it and everybody redoes it. Treating it as work is the whole trick: an order, a verification at each step, and notes good enough that someone else could follow them. Do that once, properly, and you get a machine that keeps working and can be rebuilt in an hour instead of a day. You also get something less obvious but more useful &mdash; a real understanding of how the layers fit together, which is exactly the knowledge that lets you debug the strange failure six weeks from now. Then close this book and go do the robotics.
+  </div>
+
+  <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
+
+</div>
+</div>
+
+<div id="palette" role="dialog" aria-modal="true">
+  <div id="palbox">
+    <input id="palinput" type="text" placeholder="Search the whole book&hellip;" autocomplete="off" spellcheck="false">
+    <div id="palresults"></div>
+    <div id="palhint"><span><b>&uarr;&darr;</b> navigate</span><span><b>&crarr;</b> open</span><span><b>esc</b> close</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement, body=document.body;
+  var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+  var themeBtn=document.getElementById('themebtn');
+  function applyTheme(t){root.setAttribute('data-theme',t);themeBtn.innerHTML=(t==='light')?'&#9728;':'&#9789;';LS.set('roboinstall-theme',t);}
+  applyTheme(LS.get('roboinstall-theme','dark'));
+  themeBtn.addEventListener('click',function(){applyTheme(root.getAttribute('data-theme')==='light'?'dark':'light');});
+
+  var fs=parseInt(LS.get('roboinstall-fs','16'),10);
+  function applyFs(){fs=Math.max(13,Math.min(21,fs));root.style.setProperty('--fs',fs+'px');LS.set('roboinstall-fs',fs);}
+  applyFs();
+  document.getElementById('fsup').addEventListener('click',function(){fs+=1;applyFs();});
+  document.getElementById('fsdown').addEventListener('click',function(){fs-=1;applyFs();});
+
+  var collapsed={};try{collapsed=JSON.parse(LS.get('roboinstall-collapsed','{}'))||{};}catch(e){collapsed={};}
+  [].forEach.call(document.querySelectorAll('.navpart'),function(part){
+    var btn=part.querySelector('button.part');var key=btn.textContent.trim();
+    if(collapsed[key])part.classList.add('collapsed');
+    btn.addEventListener('click',function(){part.classList.toggle('collapsed');collapsed[key]=part.classList.contains('collapsed');LS.set('roboinstall-collapsed',JSON.stringify(collapsed));});
+  });
+
+  var used={};document.querySelectorAll('[id]').forEach(function(el){used[el.id]=true;});
+  function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50);}
+  document.querySelectorAll('.content h3, .content h4').forEach(function(h){if(h.id)return;var base=slug(h.textContent)||'s',id=base,n=2;while(used[id]){id=base+'-'+(n++);}used[id]=true;h.id=id;});
+  document.querySelectorAll('.content h2.chap, .content h3').forEach(function(h){if(!h.id)return;var a=document.createElement('a');a.className='anchor';a.href='#'+h.id;a.textContent='#';a.title='Link to this section';h.appendChild(a);});
+
+  var content=document.querySelector('.content');
+  var heads=[].slice.call(content.querySelectorAll('h2.chap'));
+  function chapTitle(h){var c=h.cloneNode(true);var n=c.querySelector('.n');if(n)n.remove();var a=c.querySelector('.anchor');if(a)a.remove();return c.textContent.trim();}
+  heads.forEach(function(h){var words=0,el=h.nextElementSibling;while(el&&!(el.matches&&el.matches('h2.chap'))){words+=(el.textContent||'').split(/\s+/).length;el=el.nextElementSibling;}
+    if(words>40){var mins=Math.max(1,Math.round(words/200));var rt=document.createElement('div');rt.className='readtime';rt.innerHTML='&#128338; ~'+mins+' min read &middot; '+words.toLocaleString()+' words';if(h.nextSibling)h.parentNode.insertBefore(rt,h.nextSibling);else h.parentNode.appendChild(rt);}});
+
+  function pagerCell(h,dir){if(!h)return '<span class="empty"></span>';return '<a class="'+dir+'" href="#'+h.id+'"><div class="dir">'+(dir==='prev'?'← Previous':'Next →')+'</div><div class="ttl">'+chapTitle(h)+'</div></a>';}
+  heads.forEach(function(h,i){var pager=document.createElement('div');pager.className='pager';pager.innerHTML=pagerCell(heads[i-1],'prev')+pagerCell(heads[i+1],'next');
+    var next=heads[i+1];if(next){var target=next;if(target.previousElementSibling&&target.previousElementSibling.matches&&target.previousElementSibling.matches('h2.part-divider'))target=target.previousElementSibling;content.insertBefore(pager,target);}else{var bt=document.getElementById('backtop');var hr=content.querySelector('hr');content.insertBefore(pager,hr||bt);}});
+
+  document.querySelectorAll('.content pre').forEach(function(pre){var wrap=document.createElement('div');wrap.className='codewrap';pre.parentNode.insertBefore(wrap,pre);wrap.appendChild(pre);var btn=document.createElement('button');btn.className='copybtn';btn.textContent='Copy';wrap.appendChild(btn);
+    btn.addEventListener('click',function(){var txt=pre.innerText;var done=function(){btn.textContent='Copied!';btn.classList.add('done');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('done');},1400);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){fallback(txt);done();});}else{fallback(txt);done();}});});
+  function fallback(txt){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();}
+
+  var navlinks=[].slice.call(document.querySelectorAll('a.navlink'));
+  var readSet={};try{readSet=JSON.parse(LS.get('roboinstall-read','{}'))||{};}catch(e){readSet={};}
+  var readFill=document.getElementById('readfill'),readLabel=document.getElementById('readlabel');
+  function refreshProgress(){var total=navlinks.length,done=0;navlinks.forEach(function(a){if(readSet[a.getAttribute('href')]){a.classList.add('read');done++;}else a.classList.remove('read');});readFill.style.width=(total?Math.round(done/total*100):0)+'%';readLabel.textContent=done+' of '+total+' read';}
+  navlinks.forEach(function(a){var chk=a.querySelector('.check');if(chk)chk.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('roboinstall-read',JSON.stringify(readSet));refreshProgress();});});
+  refreshProgress();
+
+  var navByHref={};navlinks.forEach(function(a){navByHref[a.getAttribute('href')]=a;});
+  var spyTargets=navlinks.map(function(a){var el=document.querySelector(a.getAttribute('href'));return el?{a:a,el:el,id:a.getAttribute('href')}:null;}).filter(Boolean);
+  var crumb=document.getElementById('crumb'),prog=document.getElementById('progress'),backtop=document.getElementById('backtop');var curId=null;
+  function onScroll(){var sc=window.pageYOffset,h=document.documentElement.scrollHeight-window.innerHeight;prog.style.width=(h>0?(sc/h*100):0)+'%';backtop.classList.toggle('show',sc>500);
+    var cur=spyTargets[0];for(var i=0;i<spyTargets.length;i++){if(spyTargets[i].el.getBoundingClientRect().top<=120)cur=spyTargets[i];}
+    if(cur&&cur.id!==curId){curId=cur.id;navlinks.forEach(function(a){a.classList.remove('active');});cur.a.classList.add('active');crumb.innerHTML='<b>'+cur.a.textContent.trim()+'</b>';}}
+  document.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll);window.addEventListener('load',onScroll);onScroll();
+
+  var navsearch=document.getElementById('navsearch');
+  navsearch.addEventListener('input',function(){var q=navsearch.value.trim().toLowerCase();navlinks.forEach(function(a){var hit=a.textContent.toLowerCase().indexOf(q)>=0;a.classList.toggle('hidden',q.length>0&&!hit);});if(q.length>0)document.querySelectorAll('.navpart').forEach(function(p){p.classList.remove('collapsed');});});
+
+  var index=[];
+  document.querySelectorAll('.content h2.chap').forEach(function(h){index.push({id:h.id,text:chapTitle(h),lvl:'Chapter',chap:chapTitle(h)});});
+  (function(){var curChap='';document.querySelectorAll('.content h2.chap, .content h3, .content h4').forEach(function(h){if(h.matches('h2.chap')){curChap=chapTitle(h);return;}var t=h.cloneNode(true);var a=t.querySelector('.anchor');if(a)a.remove();index.push({id:h.id,text:t.textContent.trim(),lvl:(h.tagName==='H3'?'Section':'Topic'),chap:curChap});});})();
+  var palette=document.getElementById('palette'),palinput=document.getElementById('palinput'),palresults=document.getElementById('palresults');var palSel=0,palShown=[];
+  function renderPal(q){q=q.trim().toLowerCase();palShown=!q?index.slice(0,40):index.filter(function(it){return it.text.toLowerCase().indexOf(q)>=0||it.chap.toLowerCase().indexOf(q)>=0;}).slice(0,60);palSel=0;
+    palresults.innerHTML=palShown.length?palShown.map(function(it,i){var ctx=(it.lvl!=='Chapter'&&it.chap)?'<span class="ctx">'+it.chap+'</span>':'';return '<div class="palitem'+(i===0?' sel':'')+'" data-id="'+it.id+'"><span class="lvl">'+it.lvl+'</span><span class="txt">'+it.text+'</span>'+ctx+'</div>';}).join(''):'<div class="palitem"><span class="txt" style="color:var(--faint)">No matches</span></div>';}
+  function openPal(){palette.classList.add('open');palinput.value='';renderPal('');palinput.focus();}
+  function closePal(){palette.classList.remove('open');}
+  function goPal(){var it=palShown[palSel];if(it){closePal();location.hash='#'+it.id;}}
+  document.getElementById('palbtn').addEventListener('click',openPal);
+  palinput.addEventListener('input',function(){renderPal(palinput.value);});
+  palresults.addEventListener('click',function(e){var d=e.target.closest('.palitem');if(d&&d.dataset.id){closePal();location.hash='#'+d.dataset.id;}});
+  palette.addEventListener('click',function(e){if(e.target===palette)closePal();});
+  palinput.addEventListener('keydown',function(e){var items=palresults.querySelectorAll('.palitem');
+    if(e.key==='ArrowDown'){e.preventDefault();palSel=Math.min(palShown.length-1,palSel+1);}else if(e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(0,palSel-1);}else if(e.key==='Enter'){e.preventDefault();goPal();return;}else if(e.key==='Escape'){closePal();return;}else return;
+    items.forEach(function(d,i){d.classList.toggle('sel',i===palSel);});if(items[palSel])items[palSel].scrollIntoView({block:'nearest'});});
+
+  var scrim=document.getElementById('scrim');
+  function closeNav(){body.classList.remove('navopen');}
+  document.getElementById('hamburger').addEventListener('click',function(){body.classList.toggle('navopen');});
+  scrim.addEventListener('click',closeNav);
+  navlinks.forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=980)closeNav();});});
+
+  document.addEventListener('keydown',function(e){var tag=(e.target.tagName||'').toLowerCase(),typing=(tag==='input'||tag==='textarea');
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal();return;}
+    if(typing)return;
+    if(e.key==='/'){e.preventDefault();openPal();return;}
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){var idx=spyTargets.findIndex(function(s){return s.id==='#'+curId;});if(idx<0)idx=0;var go=e.key==='ArrowRight'?spyTargets[idx+1]:spyTargets[idx-1];if(go){e.preventDefault();location.hash=go.id;}}
+    else if(e.key.toLowerCase()==='t'){window.scrollTo({top:0,behavior:'smooth'});}
+    else if(e.key.toLowerCase()==='r'){var a=navByHref['#'+curId];if(a){var h=a.getAttribute('href');if(readSet[h])delete readSet[h];else readSet[h]=1;LS.set('roboinstall-read',JSON.stringify(readSet));refreshProgress();}}
+    else if(e.key.toLowerCase()==='b'){body.classList.toggle('navopen');}});
+})();
+</script>
+
+</body>
+</html>
