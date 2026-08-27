@@ -313,6 +313,7 @@ html[data-theme="light"] #fx{opacity:.24}
       <a class="navlink" href="#appA"><span class="check">&#10003;</span>A &middot; Command Cheat-Sheets</a>
       <a class="navlink" href="#appB"><span class="check">&#10003;</span>B &middot; Subnetting Reference</a>
       <a class="navlink" href="#appC"><span class="check">&#10003;</span>C &middot; Ports &amp; Troubleshooting Trees</a>
+      <a class="navlink" href="#sources"><span class="check">&#10003;</span>&#128218; Sources &amp; Further Reading</a>
     </div>
   </div>
 </nav>
@@ -1875,6 +1876,35 @@ Q: Split 10.1.1.0/24 into subnets of ~60 hosts each
     <span class="h">A closing word from the author</span>
     Networking rewards mental models over memorization. You will never remember every protocol field or every command flag &mdash; but if you can picture the layers, reason about where a packet is in its journey, and divide a problem in half at the right layer, you can troubleshoot anything, including gear you've never seen. That's the whole game: not knowing every answer, but knowing how to <em>find</em> it methodically. Build the lab, make routers talk, watch the packets, break things and fix them &mdash; and the abstract fog turns into something you can see in your head. Once networking clicks, the other three books in this series get easier too, because the network was underneath all of them the whole time.
   </div>
+
+  <h2 class="chap" id="sources">Sources &amp; Further Reading <span class="n">&mdash; Appendix</span></h2>
+  <p class="intro">Networking is one of the few computing subjects whose ground truth is written down completely and publicly: the protocols are defined in RFCs, and the addresses and port numbers are assigned by IANA. Where this book explains <em>why</em> a subnet has two unusable addresses or why <code>169.254.x.x</code> means "DHCP failed," the source of record is the relevant RFC below &mdash; and much of it is also verifiable at your own prompt with the Chapter 25 toolkit.</p>
+
+  <div class="box warn">
+    <span class="h">Standards are stable; assignments and gear are not</span>
+    The protocol RFCs below are stable references, verified reachable on <strong>27 August 2026</strong>. Vendor CLIs, default configurations, and the IANA port registry change over time; the subnetting math and the addressing rules do not. Where a specific device's behaviour differs from this book, that device's own documentation governs &mdash; but the RFC governs what the protocol actually requires.
+  </div>
+
+  <h3>Addressing &amp; subnetting</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc4632" target="_blank" rel="noopener noreferrer">RFC 4632 &mdash; CIDR</a></td><td>IETF</td><td>Prefix notation, the mask/host-bit relationship, and the <code>/24</code>&ndash;<code>/30</code> reference table</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc1918" target="_blank" rel="noopener noreferrer">RFC 1918 &mdash; Private address allocation</a></td><td>IETF</td><td>The <code>10/8</code>, <code>172.16/12</code>, <code>192.168/16</code> private ranges to recognise on sight</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc3927" target="_blank" rel="noopener noreferrer">RFC 3927 &mdash; Link-local (APIPA)</a></td><td>IETF</td><td>The <code>169.254.0.0/16</code> self-assigned range and the "DHCP failed" diagnosis</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc3021" target="_blank" rel="noopener noreferrer">RFC 3021 &mdash; /31 point-to-point links</a></td><td>IETF</td><td>The special two-host <code>/31</code> case for router-to-router links in the VLSM chapter</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc4291" target="_blank" rel="noopener noreferrer">RFC 4291 &mdash; IPv6 addressing</a></td><td>IETF</td><td>IPv6 shorthand, <code>::1</code> loopback, <code>fe80::/10</code> link-local, and the <code>/64</code> subnet norm</td></tr>
+  </table>
+
+  <h3>Core protocols</h3>
+  <table>
+    <tr><th>Source</th><th>Publisher</th><th>Used for</th></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc9293" target="_blank" rel="noopener noreferrer">RFC 9293 &mdash; TCP</a></td><td>IETF</td><td>The handshake, reliability, and reordering behaviour in the transport chapter</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc768" target="_blank" rel="noopener noreferrer">RFC 768 &mdash; UDP</a></td><td>IETF</td><td>Connectionless datagrams &mdash; the DNS/DHCP/VoIP "fire and forget" model</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc2131" target="_blank" rel="noopener noreferrer">RFC 2131 &mdash; DHCP</a></td><td>IETF</td><td>The Discover/Offer/Request/Ack lease and the four things every scope hands out</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc1034" target="_blank" rel="noopener noreferrer">RFC 1034</a> / <a href="https://www.rfc-editor.org/rfc/rfc1035" target="_blank" rel="noopener noreferrer">1035 &mdash; DNS</a></td><td>IETF</td><td>The name hierarchy, resolver walk, and record types in the DNS chapter</td></tr>
+    <tr><td><a href="https://www.rfc-editor.org/rfc/rfc9110" target="_blank" rel="noopener noreferrer">RFC 9110 &mdash; HTTP semantics</a></td><td>IETF</td><td>Status-code families (2xx/3xx/4xx/5xx) and the statelessness/cookies material</td></tr>
+    <tr><td><a href="https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml" target="_blank" rel="noopener noreferrer">IANA Service Name &amp; Port Number Registry</a></td><td>IANA</td><td>The authoritative port assignments behind the "common ports" catalogue and Appendix C</td></tr>
+  </table>
 
   <a href="#" class="backtop" id="backtop" title="Back to top">&uarr;</a>
 
